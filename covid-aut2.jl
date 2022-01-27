@@ -38,8 +38,14 @@ md"""
 # ╔═╡ 79233d6b-6c46-4c2d-b527-23994eeb6084
 url_cases = "https://covid19-dashboard.ages.at/data/CovidFaelle_Timeline.csv"
 
+# ╔═╡ e4e75ab1-613c-40b0-b67f-06a37580dbcc
+url_cases_district = "https://covid19-dashboard.ages.at/data/CovidFaelle_Timeline_GKZ.csv"
+
 # ╔═╡ f7e7f454-dbdb-4d30-b2dd-0b0957117245
 url_hosp = "https://covid19-dashboard.ages.at/data/Hospitalisierung.csv"
+
+# ╔═╡ 73e10f8f-6c80-440f-bbcf-76430c89d1d4
+url_vacc_municipality = "https://info.gesundheitsministerium.gv.at/data/COVID19_vaccination_municipalities.csv"
 
 # ╔═╡ 5f5efde7-2f10-43b3-bb78-6034fbe109f0
 md"""
@@ -56,6 +62,19 @@ md"""
 ### Normalize by peak
 """
 
+# ╔═╡ 99f5d795-9817-481b-aae5-31483ab5e96e
+function get_wave(df0, geo_id)
+	@chain df0 begin
+		@subset(Date("2021-09-01") < :date < Date("2021-12-31"))
+		sort(:MA, rev = true)
+		@groupby($geo_id, :variable)
+		combine(first, _)
+		@select($geo_id, :variable, :peak_date = :date, :peak_value = :MA)
+		@groupby($geo_id)
+		@transform(:peak_diff = @c :peak_date .- first(:peak_date))
+	end
+end
+
 # ╔═╡ 60babd66-3c97-450b-88af-6a3f909870a2
 md"""
 ### End of time series for dashed lines
@@ -65,6 +84,14 @@ md"""
 md"""
 ## Construct the plot
 """
+
+# ╔═╡ a48b293c-17cb-4011-a98b-ee9263d39f0d
+md"""
+# Vaccinations and Decoupling by District
+"""
+
+# ╔═╡ c0c8b750-b397-4db5-8e42-d2b91c523207
+
 
 # ╔═╡ a8b221cb-9829-41b5-af5d-ce9f6f1c418f
 md"""
@@ -84,8 +111,21 @@ function df_from_remote_csv(url)
 	DataFrame(CSV.File(HTTP.get(url).body))
 end
 
-# ╔═╡ e63ad152-1d97-43cb-a084-667bbc547019
-df_from_remote_csv(url_cases)
+# ╔═╡ 6c53c894-b146-4be4-95bf-427c10bb6685
+df_vacc = df_from_remote_csv(url_vacc_municipality)
+
+# ╔═╡ 33108225-262c-41e6-a3a9-153d75c4df3d
+@chain df_vacc begin
+	@aside length(unique(_.date)) == 1
+	@transform(:district = :municipality_id ÷ 100)
+	@groupby(:district)
+	@combine(
+		:population = sum(:municipality_population),
+		:vaccinated = sum(:valid_certificates)
+	)
+	@transform!(:percent_vaccinated = :vaccinated / :population)
+	
+end
 
 # ╔═╡ 6b4760e3-e023-4feb-a295-f1de3ba1c98c
 df_hosp = @chain url_hosp begin
@@ -109,7 +149,7 @@ Uses hospitalization data until $(maximum(df_hosp.date)) and cases and fatalitie
 """
 
 # ╔═╡ 3badec06-705c-46b0-8058-6137f0d44e09
-df0 = @chain begin
+df = @chain begin
 	leftjoin(df_cases, df_hosp, on = [:date, :Bundesland, :BundeslandID])
 	@select(:Bundesland, :date,
 		:cases = :AnzahlFaelle,
@@ -123,22 +163,7 @@ df0 = @chain begin
 	sort(:date)
 	@groupby(:Bundesland, :variable)
 	@transform(:MA = @c runmean(:value, 7))
-end
-
-# ╔═╡ 99f5d795-9817-481b-aae5-31483ab5e96e
-wave = @chain df0 begin
-	@subset(Date("2021-09-01") < :date < Date("2021-12-31"))
-	sort(:MA, rev = true)
-	@groupby(:Bundesland, :variable)
-	combine(first, _)
-	@select(:Bundesland, :variable, :peak_date = :date, :peak_value = :MA)
-	@groupby(:Bundesland)
-	@transform(:peak_diff = @c :peak_date .- first(:peak_date) )
-end
-
-# ╔═╡ 703d1a8f-53f7-4de5-a529-10c63c125af4
-df = @chain df0 begin
-	leftjoin(_, wave, on = [:Bundesland, :variable])
+	leftjoin(_, get_wave(_, :Bundesland), on = [:Bundesland, :variable])
 	@transform(:MA = :MA / :peak_value - 1)
 	@transform(:date = Dates.days((:date - :peak_date)))
 end
@@ -177,7 +202,54 @@ end
 normalized_time_series(from = -30)
 
 # ╔═╡ 058ae010-9926-4c69-badd-0529864eea33
-normalized_time_series(vs = ["cases", "deaths"])
+normalized_time_series(vs = ["cases", "beds", "icu"])
+
+# ╔═╡ 43dd5bd0-f777-4a99-9d97-6744b7544052
+df_cases_district = @chain url_cases_district begin
+	df_from_remote_csv
+	@transform(:date = Date(:Time, dateformat"dd.mm.YYYY HH:MM:SS"))
+	select(Not(:Time))
+end
+
+# ╔═╡ 38777efa-881f-4f41-bd17-2dfb7a4cfa71
+df_district = @chain df_cases_district begin
+	@select(:district = :Bezirk, :district_id = :GKZ, :date,
+		:cases = :AnzahlFaelle,
+		:deaths = :AnzahlTotTaeglich,
+#		:beds = :NormalBettenBelCovid19,
+#		:icu = :IntensivBettenBelCovid19,
+	 	:population = :AnzEinwohner
+	)
+	stack([:cases, :deaths])
+	@subset(!ismissing(:value))
+	sort(:date)
+	@groupby(:district, :district_id, :variable)
+	@transform(:MA = @c runmean(:value, 7))
+	select(Not(:value))
+	unstack(:variable, :MA)
+	@transform(:cfr = :deaths / :cases)
+	stack([:deaths, :cases, :cfr], value_name = "MA")
+	leftjoin(_, get_wave(_, :district), on = [:district, :variable])
+	@transform(:MA = :MA / :peak_value - 1)
+	@transform(:date = Dates.days((:date - :peak_date)))
+	sort!(:date)
+end
+
+# ╔═╡ a7a6f1be-fb86-404b-8c4a-1de80c709eac
+@chain df_district begin
+	@subset(:variable == "cfr")
+	sort(:date)
+	@groupby(:district)
+	combine(last, _)
+	@subset(isfinite(:MA))
+	hist(_.MA)
+end
+
+# ╔═╡ 0b545808-3a3d-4e7e-86e9-f874b563acad
+@chain df_district begin
+	#unstack(:value, :variable) #value, :variable)
+	data(_) * mapping(:date, :MA, row = :variable, group = :district) * visual(Lines, color = (:black, 0.1)) |> draw
+end
 
 # ╔═╡ 6ba324a9-7f3e-425d-a348-e049a72bf74f
 normalized_time_series(vs = ["cases", "beds", "icu"])
@@ -1484,8 +1556,11 @@ version = "3.5.0+0"
 # ╟─08a5407b-d636-4406-b113-8471351d03f7
 # ╠═e8bdb54e-0b44-4b25-80e8-3f2875b54559
 # ╠═79233d6b-6c46-4c2d-b527-23994eeb6084
+# ╠═e4e75ab1-613c-40b0-b67f-06a37580dbcc
 # ╠═f7e7f454-dbdb-4d30-b2dd-0b0957117245
-# ╠═e63ad152-1d97-43cb-a084-667bbc547019
+# ╠═73e10f8f-6c80-440f-bbcf-76430c89d1d4
+# ╠═6c53c894-b146-4be4-95bf-427c10bb6685
+# ╠═33108225-262c-41e6-a3a9-153d75c4df3d
 # ╠═6b4760e3-e023-4feb-a295-f1de3ba1c98c
 # ╠═23956e11-54ab-4be2-8d6d-1a1c44c46a18
 # ╟─5f5efde7-2f10-43b3-bb78-6034fbe109f0
@@ -1493,11 +1568,16 @@ version = "3.5.0+0"
 # ╠═3badec06-705c-46b0-8058-6137f0d44e09
 # ╟─d28ff4db-41ff-4fc6-ac02-56a246390ae6
 # ╠═99f5d795-9817-481b-aae5-31483ab5e96e
-# ╠═703d1a8f-53f7-4de5-a529-10c63c125af4
 # ╟─60babd66-3c97-450b-88af-6a3f909870a2
 # ╠═8ee6f423-71af-4c0a-9cac-3c90c12fc712
 # ╟─12db5b52-ca06-487d-9824-35686696763a
 # ╠═7671a2e8-83d1-4fc5-9c15-0dfc21d78cd8
+# ╟─a48b293c-17cb-4011-a98b-ee9263d39f0d
+# ╠═43dd5bd0-f777-4a99-9d97-6744b7544052
+# ╠═38777efa-881f-4f41-bd17-2dfb7a4cfa71
+# ╠═a7a6f1be-fb86-404b-8c4a-1de80c709eac
+# ╠═0b545808-3a3d-4e7e-86e9-f874b563acad
+# ╠═c0c8b750-b397-4db5-8e42-d2b91c523207
 # ╟─a8b221cb-9829-41b5-af5d-ce9f6f1c418f
 # ╟─18116578-d6c1-41c4-a51d-064c1eb4c84f
 # ╠═2ac9e1b6-7f47-11ec-1f18-eb91578b5467
