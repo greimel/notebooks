@@ -16,15 +16,64 @@ using Chain: @chain
 # ╔═╡ 3de66457-840a-4c8c-b613-0d16adc64b9d
 using DataFrameMacros
 
+# ╔═╡ 9b77887b-8f83-4781-abfa-c1e9c43c9fba
+using AlgebraOfGraphics, CairoMakie
+
 # ╔═╡ cfea0189-1877-49e8-80f5-167db815fafd
 using RollingFunctions
 
-# ╔═╡ 9b77887b-8f83-4781-abfa-c1e9c43c9fba
-using AlgebraOfGraphics, CairoMakie
+# ╔═╡ 8f06d392-4df9-425a-94a7-2fc67649c8cb
+using PlutoUI
 
 # ╔═╡ 364bfe33-650f-489a-b416-e091cc0e9f19
 md"""
 # The decoupling of Covid-19 cases, hospitalizations and deaths
+"""
+
+# ╔═╡ 08a5407b-d636-4406-b113-8471351d03f7
+md"""
+## Download data
+"""
+
+# ╔═╡ 79233d6b-6c46-4c2d-b527-23994eeb6084
+url_cases = "https://covid19-dashboard.ages.at/data/CovidFaelle_Timeline.csv"
+
+# ╔═╡ f7e7f454-dbdb-4d30-b2dd-0b0957117245
+url_hosp = "https://covid19-dashboard.ages.at/data/Hospitalisierung.csv"
+
+# ╔═╡ 5f5efde7-2f10-43b3-bb78-6034fbe109f0
+md"""
+## Clean data
+"""
+
+# ╔═╡ 499e0bb8-c65c-49ba-b45a-25d87d4fe717
+md"""
+### Rename, stack, 7-day-average
+"""
+
+# ╔═╡ d28ff4db-41ff-4fc6-ac02-56a246390ae6
+md"""
+### Normalize by peak
+"""
+
+# ╔═╡ 60babd66-3c97-450b-88af-6a3f909870a2
+md"""
+### End of time series for dashed lines
+"""
+
+# ╔═╡ 12db5b52-ca06-487d-9824-35686696763a
+md"""
+## Construct the plot
+"""
+
+# ╔═╡ a8b221cb-9829-41b5-af5d-ce9f6f1c418f
+md"""
+# Appendix
+"""
+
+# ╔═╡ 18116578-d6c1-41c4-a51d-064c1eb4c84f
+md"""
+## Package environment
 """
 
 # ╔═╡ 2ac9e1b6-7f47-11ec-1f18-eb91578b5467
@@ -34,12 +83,6 @@ import CSV, HTTP
 function df_from_remote_csv(url)
 	DataFrame(CSV.File(HTTP.get(url).body))
 end
-
-# ╔═╡ 79233d6b-6c46-4c2d-b527-23994eeb6084
-url_cases = "https://covid19-dashboard.ages.at/data/CovidFaelle_Timeline.csv"
-
-# ╔═╡ f7e7f454-dbdb-4d30-b2dd-0b0957117245
-url_hosp = "https://covid19-dashboard.ages.at/data/Hospitalisierung.csv"
 
 # ╔═╡ e63ad152-1d97-43cb-a084-667bbc547019
 df_from_remote_csv(url_cases)
@@ -100,47 +143,37 @@ end_df = @chain df begin
 end
 
 # ╔═╡ 7671a2e8-83d1-4fc5-9c15-0dfc21d78cd8
-@chain df begin
-	@aside bs = ["Österreich"]
-	@aside vs = ["cases", "beds", "icu", "deaths"]
-	@subset(:Bundesland ∈ bs, :variable ∈ vs)
-	@subset(:date > -30)
-	@aside end_dates = @subset(end_df, :Bundesland ∈ bs, :variable ∈ vs).latest
-	data(_) * mapping(:date => "days since peak of fourth wave", :MA => "7-day-avg. (relative to peak of fourth wave)", color = :variable => sorter("cases", "beds", "icu", "deaths") => "") * visual(Lines)
-	draw(_, legend = (position = :top, titleposition = :left, framevisible = false))
-	@aside begin
-		ax = only(_.grid).axis
-		vlines!(ax, end_dates, color = :gray, linestyle = :dash, linewidth = 1)
-		ax.ytickformat = xs -> ["$(Int(x * 100))%" for x in xs]
+function normalized_time_series(; 
+	bs = ["Österreich"],
+	vs = ["cases", "beds", "icu", "deaths"],
+	from = -Inf, showlines = (from > -250)
+	)
+
+	end_dates = @subset(end_df, :Bundesland ∈ bs, :variable ∈ vs).latest
+	@chain df begin
+		@subset(:Bundesland ∈ bs, :variable ∈ vs)
+		@subset(:date > from)
+		
+		data(_) * mapping(:date => "days since peak of fourth wave", :MA => "7-day-avg. (relative to peak of fourth wave)", color = :variable => sorter("cases", "beds", "icu", "deaths") => "") * visual(Lines)
+		draw(_, legend = (position = :top, titleposition = :left, framevisible = false))
+		@aside begin
+			ax = only(_.grid).axis
+			if showlines
+				vlines!(ax, end_dates, color = :gray, linestyle = :dash, linewidth = 1)
+			end
+			ax.ytickformat = xs -> ["$(Int(x * 100))%" for x in xs]
+		end
 	end
 end	
 
-# ╔═╡ 092319f4-d35f-4f47-b349-96405437ef83
-fieldnames(Axis)
+# ╔═╡ 761e4612-25cc-4058-9841-8f40a816c95d
+normalized_time_series(from = -30)
 
-# ╔═╡ bb1a5675-2ee7-4ac9-b89a-d8a3dedb94e6
-@chain df begin
-	@subset(:Bundesland == "Österreich")
-	#@subset(:variable ∈ ["icu", "cases"])
-	data(_) * mapping(:date, :MA, color = :variable => "") * visual(Lines)
-	draw(_, legend = (position = :top, titleposition = :left, framevisible = false))
-end
+# ╔═╡ 058ae010-9926-4c69-badd-0529864eea33
+normalized_time_series(vs = ["cases", "deaths"])
 
-# ╔═╡ 43d8c56f-a8b2-42c5-8165-6fb82bb2407f
-@chain df begin
-	@subset(:Bundesland == "Österreich")
-	@subset(:variable ∈ ["cases", "beds"])
-	data(_) * mapping(:date, :MA, color = :variable => "") * visual(Lines)
-	draw(_, legend = (position = :top, titleposition = :left, framevisible = false))
-end
-
-# ╔═╡ 174b1e32-9158-4ebe-b805-7d392e827e88
-@chain df begin
-	@subset(:Bundesland == "Österreich")
-	@subset(:variable ∈ ["cases", "deaths"])
-	data(_) * mapping(:date, :MA, color = :variable => "") * visual(Lines)
-	draw(_, legend = (position = :top, titleposition = :left, framevisible = false))
-end
+# ╔═╡ 65ad0579-aa52-4d05-86c8-a17af403215c
+TableOfContents()
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -153,6 +186,7 @@ DataFrameMacros = "75880514-38bc-4a95-a458-c2aea5a3a702"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 RollingFunctions = "b0e4dd01-7b14-53d8-9b45-175a3e362653"
 
 [compat]
@@ -163,6 +197,7 @@ Chain = "~0.4.10"
 DataFrameMacros = "~0.2.1"
 DataFrames = "~1.3.2"
 HTTP = "~0.9.17"
+PlutoUI = "~0.7.32"
 RollingFunctions = "~0.6.2"
 """
 
@@ -178,6 +213,12 @@ deps = ["ChainRulesCore", "LinearAlgebra"]
 git-tree-sha1 = "6f1d9bc1c08f9f4a8fa92e3ea3cb50153a1b40d4"
 uuid = "621f4979-c628-5d54-868e-fcf4e3e8185c"
 version = "1.1.0"
+
+[[deps.AbstractPlutoDingetjes]]
+deps = ["Pkg"]
+git-tree-sha1 = "8eaf9f1b4921132a4cff3f36a1d9ba923b14a481"
+uuid = "6e696c72-6542-2067-7265-42206c756150"
+version = "1.1.4"
 
 [[deps.AbstractTrees]]
 git-tree-sha1 = "03e0550477d86222521d254b741d470ba17ea0b5"
@@ -576,6 +617,23 @@ deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll",
 git-tree-sha1 = "129acf094d168394e80ee1dc4bc06ec835e510a3"
 uuid = "2e76f6c2-a576-52d4-95c1-20adfe4de566"
 version = "2.8.1+1"
+
+[[deps.Hyperscript]]
+deps = ["Test"]
+git-tree-sha1 = "8d511d5b81240fc8e6802386302675bdf47737b9"
+uuid = "47d2ed2b-36de-50cf-bf87-49c2cf4b8b91"
+version = "0.0.4"
+
+[[deps.HypertextLiteral]]
+git-tree-sha1 = "2b078b5a615c6c0396c77810d92ee8c6f470d238"
+uuid = "ac1192a8-f4b3-4bfe-ba22-af5b92cd3ab2"
+version = "0.9.3"
+
+[[deps.IOCapture]]
+deps = ["Logging", "Random"]
+git-tree-sha1 = "f7be53659ab06ddc986428d3a9dcc95f6fa6705a"
+uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
+version = "0.2.2"
 
 [[deps.IfElse]]
 git-tree-sha1 = "debdd00ffef04665ccbb3e150747a77560e8fad1"
@@ -993,6 +1051,12 @@ git-tree-sha1 = "6f1b25e8ea06279b5689263cc538f51331d7ca17"
 uuid = "995b91a9-d308-5afd-9ec6-746e21dbc043"
 version = "1.1.3"
 
+[[deps.PlutoUI]]
+deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "Markdown", "Random", "Reexport", "UUIDs"]
+git-tree-sha1 = "ae6145ca68947569058866e443df69587acc1806"
+uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+version = "0.7.32"
+
 [[deps.PolygonOps]]
 git-tree-sha1 = "77b3d3605fc1cd0b42d95eba87dfcd2bf67d5ff6"
 uuid = "647866c9-e3ac-4575-94e7-e3d426903924"
@@ -1403,27 +1467,35 @@ version = "3.5.0+0"
 
 # ╔═╡ Cell order:
 # ╟─364bfe33-650f-489a-b416-e091cc0e9f19
-# ╠═2ac9e1b6-7f47-11ec-1f18-eb91578b5467
-# ╠═0e2fd3a6-fe5b-4638-bcb8-7f13c9105a5d
-# ╠═1c0ee6e4-dd5a-4686-ba8f-56cdc13f74f5
-# ╠═9a09fce0-8dd8-41a0-8963-89a9d7089e36
-# ╠═3de66457-840a-4c8c-b613-0d16adc64b9d
+# ╠═761e4612-25cc-4058-9841-8f40a816c95d
+# ╠═058ae010-9926-4c69-badd-0529864eea33
+# ╟─08a5407b-d636-4406-b113-8471351d03f7
 # ╠═e8bdb54e-0b44-4b25-80e8-3f2875b54559
 # ╠═79233d6b-6c46-4c2d-b527-23994eeb6084
 # ╠═f7e7f454-dbdb-4d30-b2dd-0b0957117245
 # ╠═e63ad152-1d97-43cb-a084-667bbc547019
 # ╠═6b4760e3-e023-4feb-a295-f1de3ba1c98c
 # ╠═23956e11-54ab-4be2-8d6d-1a1c44c46a18
+# ╟─5f5efde7-2f10-43b3-bb78-6034fbe109f0
+# ╟─499e0bb8-c65c-49ba-b45a-25d87d4fe717
 # ╠═3badec06-705c-46b0-8058-6137f0d44e09
+# ╟─d28ff4db-41ff-4fc6-ac02-56a246390ae6
 # ╠═99f5d795-9817-481b-aae5-31483ab5e96e
 # ╠═703d1a8f-53f7-4de5-a529-10c63c125af4
+# ╟─60babd66-3c97-450b-88af-6a3f909870a2
 # ╠═8ee6f423-71af-4c0a-9cac-3c90c12fc712
+# ╟─12db5b52-ca06-487d-9824-35686696763a
 # ╠═7671a2e8-83d1-4fc5-9c15-0dfc21d78cd8
-# ╠═092319f4-d35f-4f47-b349-96405437ef83
-# ╠═cfea0189-1877-49e8-80f5-167db815fafd
-# ╠═bb1a5675-2ee7-4ac9-b89a-d8a3dedb94e6
-# ╠═43d8c56f-a8b2-42c5-8165-6fb82bb2407f
-# ╠═174b1e32-9158-4ebe-b805-7d392e827e88
+# ╟─a8b221cb-9829-41b5-af5d-ce9f6f1c418f
+# ╟─18116578-d6c1-41c4-a51d-064c1eb4c84f
+# ╠═2ac9e1b6-7f47-11ec-1f18-eb91578b5467
+# ╠═0e2fd3a6-fe5b-4638-bcb8-7f13c9105a5d
+# ╠═1c0ee6e4-dd5a-4686-ba8f-56cdc13f74f5
+# ╠═9a09fce0-8dd8-41a0-8963-89a9d7089e36
+# ╠═3de66457-840a-4c8c-b613-0d16adc64b9d
 # ╠═9b77887b-8f83-4781-abfa-c1e9c43c9fba
+# ╠═cfea0189-1877-49e8-80f5-167db815fafd
+# ╠═8f06d392-4df9-425a-94a7-2fc67649c8cb
+# ╠═65ad0579-aa52-4d05-86c8-a17af403215c
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
