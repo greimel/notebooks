@@ -101,6 +101,13 @@ df_cases = @chain url_cases begin
 	select(Not(:Time))
 end
 
+# ╔═╡ 8a946467-0a05-4dc0-b262-4c22855f5d19
+md"""
+_Built on $(today())._
+
+Uses hospitalization data until $(maximum(df_hosp.date)) and cases and fatalities up until $(maximum(df_cases.date))
+"""
+
 # ╔═╡ 3badec06-705c-46b0-8058-6137f0d44e09
 df0 = @chain begin
 	leftjoin(df_cases, df_hosp, on = [:date, :Bundesland, :BundeslandID])
@@ -171,6 +178,9 @@ normalized_time_series(from = -30)
 
 # ╔═╡ 058ae010-9926-4c69-badd-0529864eea33
 normalized_time_series(vs = ["cases", "deaths"])
+
+# ╔═╡ 6ba324a9-7f3e-425d-a348-e049a72bf74f
+normalized_time_series(vs = ["cases", "beds", "icu"])
 
 # ╔═╡ 65ad0579-aa52-4d05-86c8-a17af403215c
 TableOfContents()
@@ -1466,9 +1476,11 @@ version = "3.5.0+0"
 """
 
 # ╔═╡ Cell order:
+# ╟─8a946467-0a05-4dc0-b262-4c22855f5d19
 # ╟─364bfe33-650f-489a-b416-e091cc0e9f19
 # ╠═761e4612-25cc-4058-9841-8f40a816c95d
 # ╠═058ae010-9926-4c69-badd-0529864eea33
+# ╠═6ba324a9-7f3e-425d-a348-e049a72bf74f
 # ╟─08a5407b-d636-4406-b113-8471351d03f7
 # ╠═e8bdb54e-0b44-4b25-80e8-3f2875b54559
 # ╠═79233d6b-6c46-4c2d-b527-23994eeb6084
