@@ -36,10 +36,10 @@ md"""
 """
 
 # ╔═╡ 79233d6b-6c46-4c2d-b527-23994eeb6084
-url_cases = "https://covid19-dashboard.ages.at/data/CovidFaelle_Timeline.csv"
+url_cases = "https://covid19-dashboard.ages.at/data/CovidFaelle_Timeline.csv" 
 
 # ╔═╡ f7e7f454-dbdb-4d30-b2dd-0b0957117245
-url_hosp = "https://covid19-dashboard.ages.at/data/Hospitalisierung.csv"
+url_hosp = "https://covid19-dashboard.ages.at/data/Hospitalisierung.csv" 
 
 # ╔═╡ 5f5efde7-2f10-43b3-bb78-6034fbe109f0
 md"""
@@ -85,7 +85,10 @@ function df_from_remote_csv(url)
 end
 
 # ╔═╡ e63ad152-1d97-43cb-a084-667bbc547019
-df_from_remote_csv(url_cases)
+@chain url_cases begin
+	df_from_remote_csv
+	@subset(:Bundesland == "Österreich")
+end
 
 # ╔═╡ 6b4760e3-e023-4feb-a295-f1de3ba1c98c
 df_hosp = @chain url_hosp begin
@@ -113,16 +116,24 @@ df0 = @chain begin
 	leftjoin(df_cases, df_hosp, on = [:date, :Bundesland, :BundeslandID])
 	@select(:Bundesland, :date,
 		:cases = :AnzahlFaelle,
+		:active = :AnzahlFaelleSum - :AnzahlTotSum - :AnzahlGeheiltSum,
 		:deaths = :AnzahlTotTaeglich,
 		:beds = :NormalBettenBelCovid19,
 		:icu = :IntensivBettenBelCovid19,
 	 	:population = :AnzEinwohner
 	)
-	stack([:cases, :deaths, :beds, :icu])
+	stack([:cases, :deaths, :beds, :icu, :active])
 	@subset(!ismissing(:value))
 	sort(:date)
 	@groupby(:Bundesland, :variable)
 	@transform(:MA = @c runmean(:value, 7))
+end
+
+# ╔═╡ 7e7ec83a-2f5a-4191-9a51-6b1b2345ec05
+@chain df0 begin
+	@subset(:Bundesland == "Österreich")
+	@subset(:date > Date(2022, 1, 20))
+	#@select()
 end
 
 # ╔═╡ 99f5d795-9817-481b-aae5-31483ab5e96e
@@ -152,7 +163,7 @@ end
 # ╔═╡ 7671a2e8-83d1-4fc5-9c15-0dfc21d78cd8
 function normalized_time_series(; 
 	bs = ["Österreich"],
-	vs = ["cases", "beds", "icu", "deaths"],
+	vs = ["cases", "active", "beds", "icu", "deaths"],
 	from = -Inf, showlines = (from > -250)
 	)
 
@@ -161,7 +172,7 @@ function normalized_time_series(;
 		@subset(:Bundesland ∈ bs, :variable ∈ vs)
 		@subset(:date > from)
 		
-		data(_) * mapping(:date => "days since peak of fourth wave", :MA => "7-day-avg. (relative to peak of fourth wave)", color = :variable => sorter("cases", "beds", "icu", "deaths") => "") * visual(Lines)
+		data(_) * mapping(:date => "days since peak of fourth wave", :MA => "7-day-avg. (relative to peak of fourth wave)", color = :variable => sorter(vs) => "") * visual(Lines)
 		draw(_, legend = (position = :top, titleposition = :left, framevisible = false))
 		@aside begin
 			ax = only(_.grid).axis
@@ -174,7 +185,10 @@ function normalized_time_series(;
 end	
 
 # ╔═╡ 761e4612-25cc-4058-9841-8f40a816c95d
-normalized_time_series(from = -30)
+normalized_time_series(vs = ["cases", "beds", "icu", "deaths"], from = -30)
+
+# ╔═╡ c583a253-e80b-47fb-b7ea-c19af7a77943
+normalized_time_series(vs = ["active", "beds", "icu"], from = -30)
 
 # ╔═╡ 058ae010-9926-4c69-badd-0529864eea33
 normalized_time_series(vs = ["cases", "deaths"])
@@ -1479,6 +1493,7 @@ version = "3.5.0+0"
 # ╟─8a946467-0a05-4dc0-b262-4c22855f5d19
 # ╟─364bfe33-650f-489a-b416-e091cc0e9f19
 # ╠═761e4612-25cc-4058-9841-8f40a816c95d
+# ╠═c583a253-e80b-47fb-b7ea-c19af7a77943
 # ╠═058ae010-9926-4c69-badd-0529864eea33
 # ╠═6ba324a9-7f3e-425d-a348-e049a72bf74f
 # ╟─08a5407b-d636-4406-b113-8471351d03f7
@@ -1488,6 +1503,7 @@ version = "3.5.0+0"
 # ╠═e63ad152-1d97-43cb-a084-667bbc547019
 # ╠═6b4760e3-e023-4feb-a295-f1de3ba1c98c
 # ╠═23956e11-54ab-4be2-8d6d-1a1c44c46a18
+# ╠═7e7ec83a-2f5a-4191-9a51-6b1b2345ec05
 # ╟─5f5efde7-2f10-43b3-bb78-6034fbe109f0
 # ╟─499e0bb8-c65c-49ba-b45a-25d87d4fe717
 # ╠═3badec06-705c-46b0-8058-6137f0d44e09
