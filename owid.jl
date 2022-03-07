@@ -36,7 +36,7 @@ cover_letter = md"""
 
 #### What I can contribute
 
-Over the past 10 years I aquired the skills and a mindset that will be very useful for working at _Our World In Data_. I have explored many different data sets, have created pipelines for my research projects that automatically build the figures, tables and the pdf of the paper on every committed code change. And I have used visualizations of public data and simulation output to communicate ideas in my research and in the lecture room.
+Over the past 10 years I have aquired the skills and a mindset that will be very useful for working at _Our World In Data_. I explored many different data sets. I created pipelines for my research projects that automatically build the figures, tables and the pdf of the paper on every committed code change. And I used visualizations of public data and simulation output to communicate ideas in my research and in the lecture room.
 
 Quite early in my undergraduate studies I came across **knitr**, an R package for literate programming. I got hooked for reproducible research in these days, using literate programming and open data APIs for my university theses and assignments ever since.
 
@@ -176,7 +176,7 @@ labels = Dict(
 	"hwpen" => "pension assets",
 	"hwbus" => "business assets",
 	"hwfix" => "other financial assets",
-	"owner" => "main resididence (net)",
+	"owner" => "main residence (net)",
 	"rental"=> "other property (net)"
 )
 
@@ -1684,7 +1684,7 @@ version = "3.5.0+0"
 # ╟─041a1ad2-ecb0-4f14-b911-ba18c571e49b
 # ╟─51c4aa0c-9bb3-11ec-0174-c73d599a839a
 # ╟─ec3bd004-217e-4ca2-bf3c-0fd5addb53f2
-# ╠═688f4613-d8f9-4f39-b8a0-3fea94760a09
+# ╟─688f4613-d8f9-4f39-b8a0-3fea94760a09
 # ╟─9a417f25-7cbf-471f-817e-bcf141d39859
 # ╟─a92573ea-3ec5-4e23-959f-23a42cfd351c
 # ╟─b6307c8e-8990-4891-b8fc-5c179ee4d088
