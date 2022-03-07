@@ -31,32 +31,7 @@ _Fabian Greimel_ | _Amsterdam, 7 Mar 2022_
 """
 
 # ╔═╡ 2b03517f-7981-42e3-b68b-14d3c6320c09
-cover_letter = md"""
-# Cover letter
-
-#### What I can contribute
-
-Over the past 10 years I have aquired the skills and a mindset that will be very useful for working at _Our World In Data_. I explored many different data sets. I created pipelines for my research projects that automatically build the figures, tables and the pdf of the paper on every committed code change. And I used visualizations of public data and simulation output to communicate ideas in my research and in the lecture room.
-
-Quite early in my undergraduate studies I came across **knitr**, an R package for literate programming. I got hooked for reproducible research in these days, using literate programming and open data APIs for my university theses and assignments ever since.
-
-I have become a _reproducibility nerd_. I have kept annoying my collaborators by insisting on using git repositories where results and the paper automatically generated on CI (see [my paper template](https://gitlab.com/greimel/sample-paper)).
-
-On the other hand, my students seem to enjoy that I try to provide them with code for every result I am showing in class. I set up a MSc level course where all the results are either derived by hand, or programmatically computed in **Pluto.jl** notebooks that I provide (see the [course website](https://greimel.github.io/networks-course)).
-Most of the code I am providing for this course is about creating visualizations (from downloaded or simulated data) in order to communicate ideas to my students.
-
-As a by-product of my endeavours, I have contributed to numerous open source projects (mostly Julia packages). I've also published some personal projects. Most relevant, I created [a package](https://github.com/greimel/DINA.jl) that automatically downloads, stores and cleans *Distributional National Accounts* data. I've also created templates for a [research paper](https://gitlab.com/greimel/sample-paper) that is built on Gitlab CI and a template for a [course website](https://github.com/greimel/pluto-course-template) based on Pluto.jl notebooks. 
-
-I've always used nothing but free open source software.
-
-#### Why I would give up my previous job
-
-Having a tenure track position at a decent university is a huge privilege. But it has become increasingly difficult for me to cope with the frequent negative feedback during research seminars and the frequent rejections from good journals.
-
-I have found myself to spend more and more time on activities that don't count for my tenure evaluation: exploring new data sets, improving teaching material and contributing to open source software. These are the things that I care about, and these things align very well with what I expect to be the work with _Our World in Data_.
-
-To conclude with a more personal note: As a father of two little sons, my place of residence now has the highest priority. I am currently a long-distance commuter to my workplace in Amsterdam. The job at _Our World in Data_, with its option to work fully remotely, would be an immense quality of life improvement for me and my family.
-"""
+cover_letter = ""
 
 # ╔═╡ 51c4aa0c-9bb3-11ec-0174-c73d599a839a
 md"""
@@ -1724,7 +1699,7 @@ version = "3.5.0+0"
 
 # ╔═╡ Cell order:
 # ╟─848c151d-64bb-4fa6-8bb2-9487630082f6
-# ╟─2b03517f-7981-42e3-b68b-14d3c6320c09
+# ╠═2b03517f-7981-42e3-b68b-14d3c6320c09
 # ╟─041a1ad2-ecb0-4f14-b911-ba18c571e49b
 # ╟─51c4aa0c-9bb3-11ec-0174-c73d599a839a
 # ╟─ec3bd004-217e-4ca2-bf3c-0fd5addb53f2
