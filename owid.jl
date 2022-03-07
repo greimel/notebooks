@@ -288,6 +288,50 @@ wordcount(gid)
 # ╔═╡ a92573ea-3ec5-4e23-959f-23a42cfd351c
 wordcount(dina)
 
+# ╔═╡ 666b2dba-511f-4293-88ce-a37db494e8ee
+md"""
+## Some other plots
+"""
+
+# ╔═╡ 6f324ac1-9277-493a-a44b-a68d68f15709
+@chain three_groups_df begin
+	@groupby(:year, :three_groups)
+	@transform(:leverage = -:ownermort / :ownerhome_heter)
+	data(_) * mapping(
+		:year,
+		:leverage,
+		#stack = :variable,
+		color = :three_groups => "income group"
+	) * visual(Lines)
+	draw
+end
+
+# ╔═╡ bf793cd4-f6ab-489f-a8dc-d826862d59e0
+@chain three_groups_df begin
+	@groupby(:year, :three_groups)
+	@transform(:new_variable = :owner / :peinc)
+	data(_) * mapping(
+		:year,
+		:new_variable => "equity-to-income ratio",
+		#stack = :variable,
+		color = :three_groups => "income group"
+	) * visual(Lines)
+	draw
+end
+
+# ╔═╡ b7bf809c-8083-4228-81f2-88273387eacb
+@chain three_groups_df begin
+	@groupby(:year, :three_groups)
+	@transform(:new_variable = :ownerhome_heter / :peinc)
+	data(_) * mapping(
+		:year,
+		:new_variable => "",
+		#stack = :variable,
+		color = :three_groups => "income group"
+	) * visual(Lines)
+	draw
+end
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
@@ -1720,5 +1764,9 @@ version = "3.5.0+0"
 # ╠═f3193d30-df24-4ac7-a285-f868c0906d4d
 # ╠═90b9be8d-f4de-4ba7-bbd3-16f210d3595a
 # ╠═73701b0b-d331-47ff-9782-d24572d35172
+# ╟─666b2dba-511f-4293-88ce-a37db494e8ee
+# ╠═6f324ac1-9277-493a-a44b-a68d68f15709
+# ╠═bf793cd4-f6ab-489f-a8dc-d826862d59e0
+# ╠═b7bf809c-8083-4228-81f2-88273387eacb
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
