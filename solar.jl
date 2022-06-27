@@ -20,6 +20,9 @@ using Statistics
 # ╔═╡ 7c5cbd92-6b6f-497d-bd5d-99663e1a8356
 using PlutoUI
 
+# ╔═╡ b8f76f30-ed9e-4010-b4e8-a3b173c2f302
+using PlutoUI: Slider
+
 # ╔═╡ 0614b259-53dc-440c-8b2a-6ed457a34bf1
 using CairoMakie, AlgebraOfGraphics
 
@@ -63,26 +66,165 @@ kWp = 20
 # ╔═╡ 2542d461-e62e-4033-98bc-308539631bdc
 pa = 1000 * kWp
 
-# ╔═╡ 6268750b-b240-4e86-813c-498a1089a254
-anschaffung = 1600 * kWp
+# ╔═╡ 68aa2779-c9c1-4ea9-87e7-833f2223d173
+michi = (26000-3) / 12.3
 
-# ╔═╡ aec4954c-8237-4096-82c0-263927115931
-@bind price PlutoUI.Slider(0.05:0.05:0.2, show_value=true, default = 0.05)
+# ╔═╡ 3da36663-6898-40dc-b0b4-5e25c5354863
+md"""
+* Anschaffungskosten (EUR pro kWp) $(@bind invest Slider(1600:100:2500, default = michi, show_value = true))
+* Strompreis $(@bind price PlutoUI.Slider(0.05:0.01:0.4, show_value=true, default = 0.1))
+  (Awattar 2021 EUR 0.1, derzeit 0.2)
+"""
+
+# ╔═╡ 6268750b-b240-4e86-813c-498a1089a254
+anschaffung = invest * kWp
 
 # ╔═╡ 0053e2f7-1071-456f-b881-7de3921867f7
 revenue = pa * price
 
 # ╔═╡ d8a4bda7-b495-4d4e-a87b-2e09c74d355f
-saved_kw = 700 # kWh
+saved_kw = 1500 # kWh
 
 # ╔═╡ 5caad563-6387-4fda-9a8a-438c3852d0c6
 saved = saved_kw * 2price # https://pvaustria.at/sonnenklar_rechner/
 
 # ╔═╡ 50ece353-f618-4f61-af3a-75f6096d6680
-anschaffung / (revenue + saved)
+amortisationszeit = anschaffung / (revenue + saved)
 
-# ╔═╡ af2655be-1dc6-4b9b-ae51-646dfb6a9c25
-revenue / 12
+# ╔═╡ dacaffe9-c0ee-43e0-adef-6d1de2771059
+md"""
+* Investitionssumme: $anschaffung
+* Amortisationszeit in Jahren: $(round(amortisationszeit, digits=2))
+"""
+
+# ╔═╡ 19554911-d5d1-4617-9818-e26f4313cd25
+md"""
+# Dachgröße
+"""
+
+# ╔═╡ 5983a679-3567-454f-a505-e4578a77d65f
+breite = 6.3
+
+# ╔═╡ 21ee0bed-59fe-41b8-bcee-e3b7013d5b0c
+länge = 15.2
+
+# ╔═╡ ac5d2a35-30b9-4cbc-b6ff-21024abdcfcc
+neigung = 0
+
+# ╔═╡ 75e2a1c0-3e23-45a7-abdb-c805a8e85b24
+länge * breite
+
+# ╔═╡ 8e6596e1-d27d-48a4-8b31-1a07e7cd4cb8
+schuppen = 32 # m²
+
+# ╔═╡ a4a639d2-63ab-43cc-ab68-321430b4e6c9
+modul_leistung = 410 # watt peak pro modul
+
+# ╔═╡ b85beb21-170b-478f-b6b0-d93856adf57d
+modul_größe = 1.7 # m² pro modul
+
+# ╔═╡ e0777e07-442e-48d9-b846-a18aa39e5a59
+schuppen / modul_größe * modul_leistung / 1000
+
+# ╔═╡ fa9d44f8-bd87-43c6-b223-a01055b6923b
+md"""
+# Wärmepumpe
+"""
+
+# ╔═╡ 27ad7824-8fce-4419-91c4-8085a40a0643
+md"""
+## Heizwärmebedarf
+"""
+
+# ╔═╡ 25fbfadc-1734-4490-a746-40adede1113a
+HWB = 50 # kwh/m2 a
+
+# ╔═╡ 8b7cbca0-2ec0-4ed4-bef2-47e2cd4c986b
+wohnfläche = 200
+
+# ╔═╡ 5b2abb1e-7f5a-47e2-a66a-559419329bd6
+energiebedarf(JAZ) = HWB * wohnfläche / JAZ # kWh
+
+# ╔═╡ 2d3dfc81-9e1c-4765-b635-03f54a42fb76
+md"""
+#### Leistung und Energiepreise
+"""
+
+# ╔═╡ 53b52dd3-b563-44fc-af5e-8af63d9414f9
+md"""
+[Jahrearbeitszahl](https://www.heizungsfinder.de/waermepumpe/wirtschaftlichkeit/jahresarbeitszahl#3)
+"""
+
+# ╔═╡ 9559b7f3-6910-4cad-8514-d748cfe08bdf
+JAZ_sonde = 4.25 # Jahresarbeitszahl 
+
+# ╔═╡ 521ea49c-9ca5-4a96-9f8b-884437726afa
+JAZ_luft = 2.75 # Jahresarbeitszahl
+
+# ╔═╡ 226b62e5-ddb5-4945-8de7-5fa5a2b14bdf
+gas_preis = 0.12 # durchblicker 13. Juni 2022
+
+# ╔═╡ e0498239-d59d-482d-9866-593526a7a3fd
+strom_preis = 0.3 # Durchblicker 13. Juni 2022
+
+# ╔═╡ 3f5f3b97-f618-4da1-8c06-082cfefe6274
+md"""
+## Laufende Kosten
+"""
+
+# ╔═╡ d592a7b2-600a-4fd1-bf19-116818de6b5e
+gas_pa = energiebedarf(1.0) * gas_preis
+
+# ╔═╡ 3fdd07ba-491b-416c-b24d-62fbd8b526ec
+sonde_pa = energiebedarf(JAZ_sonde) * strom_preis
+
+# ╔═╡ 5ada6126-f749-49d0-b481-47bf06febb06
+luft_pa = energiebedarf(JAZ_luft) * strom_preis
+
+# ╔═╡ 09cc60f5-18b3-470a-bbd9-dbf0fbad5e4a
+luft_pa - sonde_pa
+
+# ╔═╡ 7765837d-f36b-4412-a7be-a47e93f2ec47
+gas_pa - sonde_pa
+
+# ╔═╡ df6644b5-f38d-4b10-a66e-16fffec4e9f3
+md"""
+## Anschaffungskosten
+"""
+
+# ╔═╡ f4acacb5-c8c8-49a0-b7a5-7942d067cd9a
+
+
+# ╔═╡ a8a1d8f3-7219-4f6b-b135-71f74eb1a2c5
+md"""
+### Wärmepumpe
+[Übersicht über Förderungen](https://www.waermepumpe-austria.at/foerderungen)
+* Bundesförderung 7500 Euro
+* NÖ Landesförderung 3000 Euro bis Ende 2022
+
+### Sanierung
+* Bund: [Sanierungsscheck](https://www.umweltfoerderung.at/fileadmin/user_upload/media/umweltfoerderung/Dokumente_Private/TGS_Priv_2021/Infoblatt_sanierungsscheck_2021_2022_EFH.pdf) ca 9000
+* Land NÖ: [Eigenheimsanierung](https://www.noe.gv.at/noe/Sanieren-Renovieren/NWBF_21_006_EHS-Broschuere_20210622_ES.pdf) 6000 (9000 wenn nachwachsende Rohstoffe)
+
+### Notizen
+Höhere Förderung innerhalb 3 Jahre nach Hauskauf
+
+### Vergleich Wärmepumpen
+
+https://geothermie-schweiz.ch/lebensdauer-von-sole-wasser-waermepumpen-betraegt-fast-30-jahre/
+"""
+
+# ╔═╡ 0d177910-d9cd-4c04-a53d-0d500cb9c555
+luft = (anschaffung = 11_000 - min(7500, 0.5 * 11_000) - min(3000, 0.2 * 11_000),)
+
+# ╔═╡ 013fd307-1265-4f71-91ff-9ed6a6630d31
+flächenkollektor = (anschaffung = 16_000 - 7500 - 3000, )
+
+# ╔═╡ 608916e6-27b8-4309-9c9f-8eb28af4f013
+sonde = (anschaffung = 27_000 - 7500 - 3000, )
+
+# ╔═╡ 96a7b079-c3e6-46de-ab76-b8ab6f4d84cc
+(sonde.anschaffung - luft.anschaffung) / (luft_pa - sonde_pa)
 
 # ╔═╡ 5d5af0ae-9a7a-459d-9e95-1cbba7ed67be
 md"""
@@ -137,9 +279,10 @@ end
 
 # ╔═╡ dfdcdc9e-acc1-416b-9fb1-25eb541984bd
 @chain df2 begin
-#	@subset(2017 < :year < 2021)
+	@subset(2020 ≤ :year)
 #	@groupby(:date, :month, :year)
-	@transform(:quarter = :month ÷ 4)
+	#@transform(:quarter = :month ÷ 4)
+	#@groupby(:year, :quarter)
 	@groupby(:year, :month)
 	@combine(
 		:price = mean(:marketprice) / 1000,
@@ -153,7 +296,7 @@ end
 
 # ╔═╡ 7170f333-d433-4433-b497-122ac738639b
 @chain df2 begin
-	@subset(2017 < :year < 2021)
+	@subset(2017 < :year < 2020)
 #	@groupby(:date, :month, :year)
 	@groupby(:month)
 	@combine(:price = mean(:marketprice) / 1000)
@@ -1509,8 +1652,8 @@ version = "3.5.0+0"
 # ╔═╡ Cell order:
 # ╟─acac281d-e1e6-4ff7-9c42-9fd8f3a4d2f5
 # ╠═47a4c430-8dc2-4a8e-a597-9855e3a3c601
-# ╠═16e40b8a-30da-4cef-8263-fd06ca9153e0
-# ╠═5e4c20e4-4e3e-4ea2-ae2d-5dcf98a47b1c
+# ╟─16e40b8a-30da-4cef-8263-fd06ca9153e0
+# ╟─5e4c20e4-4e3e-4ea2-ae2d-5dcf98a47b1c
 # ╠═b15a98b3-49ba-4ce5-b7b3-29d032f8ce1c
 # ╠═bcdbd2d0-44fc-4df9-a573-caf0043f5915
 # ╠═dfdcdc9e-acc1-416b-9fb1-25eb541984bd
@@ -1518,15 +1661,50 @@ version = "3.5.0+0"
 # ╟─2424b6af-daa8-49d3-ad80-dcf302155026
 # ╠═93e8f1f4-8ec8-487a-b08d-eba03ac0fc1d
 # ╠═2542d461-e62e-4033-98bc-308539631bdc
+# ╟─3da36663-6898-40dc-b0b4-5e25c5354863
+# ╠═68aa2779-c9c1-4ea9-87e7-833f2223d173
+# ╟─dacaffe9-c0ee-43e0-adef-6d1de2771059
 # ╠═6268750b-b240-4e86-813c-498a1089a254
-# ╠═aec4954c-8237-4096-82c0-263927115931
 # ╠═0053e2f7-1071-456f-b881-7de3921867f7
 # ╠═5caad563-6387-4fda-9a8a-438c3852d0c6
 # ╠═50ece353-f618-4f61-af3a-75f6096d6680
 # ╠═d8a4bda7-b495-4d4e-a87b-2e09c74d355f
-# ╠═af2655be-1dc6-4b9b-ae51-646dfb6a9c25
+# ╟─19554911-d5d1-4617-9818-e26f4313cd25
+# ╠═5983a679-3567-454f-a505-e4578a77d65f
+# ╠═21ee0bed-59fe-41b8-bcee-e3b7013d5b0c
+# ╠═ac5d2a35-30b9-4cbc-b6ff-21024abdcfcc
+# ╠═75e2a1c0-3e23-45a7-abdb-c805a8e85b24
+# ╠═8e6596e1-d27d-48a4-8b31-1a07e7cd4cb8
+# ╠═a4a639d2-63ab-43cc-ab68-321430b4e6c9
+# ╠═b85beb21-170b-478f-b6b0-d93856adf57d
+# ╠═e0777e07-442e-48d9-b846-a18aa39e5a59
+# ╟─fa9d44f8-bd87-43c6-b223-a01055b6923b
+# ╟─27ad7824-8fce-4419-91c4-8085a40a0643
+# ╠═25fbfadc-1734-4490-a746-40adede1113a
+# ╠═8b7cbca0-2ec0-4ed4-bef2-47e2cd4c986b
+# ╠═5b2abb1e-7f5a-47e2-a66a-559419329bd6
+# ╟─2d3dfc81-9e1c-4765-b635-03f54a42fb76
+# ╟─53b52dd3-b563-44fc-af5e-8af63d9414f9
+# ╠═9559b7f3-6910-4cad-8514-d748cfe08bdf
+# ╠═521ea49c-9ca5-4a96-9f8b-884437726afa
+# ╠═226b62e5-ddb5-4945-8de7-5fa5a2b14bdf
+# ╠═e0498239-d59d-482d-9866-593526a7a3fd
+# ╟─3f5f3b97-f618-4da1-8c06-082cfefe6274
+# ╠═d592a7b2-600a-4fd1-bf19-116818de6b5e
+# ╠═3fdd07ba-491b-416c-b24d-62fbd8b526ec
+# ╠═5ada6126-f749-49d0-b481-47bf06febb06
+# ╠═09cc60f5-18b3-470a-bbd9-dbf0fbad5e4a
+# ╠═7765837d-f36b-4412-a7be-a47e93f2ec47
+# ╟─df6644b5-f38d-4b10-a66e-16fffec4e9f3
+# ╠═f4acacb5-c8c8-49a0-b7a5-7942d067cd9a
+# ╠═a8a1d8f3-7219-4f6b-b135-71f74eb1a2c5
+# ╠═0d177910-d9cd-4c04-a53d-0d500cb9c555
+# ╠═013fd307-1265-4f71-91ff-9ed6a6630d31
+# ╠═608916e6-27b8-4309-9c9f-8eb28af4f013
+# ╠═96a7b079-c3e6-46de-ab76-b8ab6f4d84cc
 # ╟─5d5af0ae-9a7a-459d-9e95-1cbba7ed67be
 # ╠═7c5cbd92-6b6f-497d-bd5d-99663e1a8356
+# ╠═b8f76f30-ed9e-4010-b4e8-a3b173c2f302
 # ╠═a4afbec4-6358-4408-b8f9-a41bf8ade392
 # ╟─173a609f-5033-44c0-a2bd-56263bb2f031
 # ╠═0614b259-53dc-440c-8b2a-6ed457a34bf1
