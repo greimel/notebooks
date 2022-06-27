@@ -1,361 +1,341 @@
 ### A Pluto.jl notebook ###
-# v0.18.0
+# v0.19.8
 
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ b2e133a8-d73f-4e54-9265-b86cc4fc3e0f
-using DINA # I am the author of this package
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+        el
+    end
+end
 
-# ╔═╡ bbbe7c01-7aa5-45f7-a69e-f73c16356051
-using AlgebraOfGraphics, CairoMakie# for plotting
+# ╔═╡ bcdbd2d0-44fc-4df9-a573-caf0043f5915
+using Statistics
 
-# ╔═╡ 9fdb06d2-0912-41ef-9032-eb04c1bfe38c
-using Chain, DataFrameMacros, DataFrames # for data wrangling
-
-# ╔═╡ e472c405-45d3-4e14-a79e-a5194856758e
-using StatsBase: weights
-
-# ╔═╡ a9744cec-04bc-4815-ad27-657ff93e444f
-using Statistics: mean
-
-# ╔═╡ e1517bdd-7d39-438b-8890-7c6e482e7c23
-using CategoricalArrays
-
-# ╔═╡ f3193d30-df24-4ac7-a285-f868c0906d4d
+# ╔═╡ 7c5cbd92-6b6f-497d-bd5d-99663e1a8356
 using PlutoUI
 
-# ╔═╡ 848c151d-64bb-4fa6-8bb2-9487630082f6
+# ╔═╡ b8f76f30-ed9e-4010-b4e8-a3b173c2f302
+using PlutoUI: Slider
+
+# ╔═╡ 0614b259-53dc-440c-8b2a-6ed457a34bf1
+using CairoMakie, AlgebraOfGraphics
+
+# ╔═╡ 61e011d0-fbb7-4dd1-bd13-175068e73ef1
+using Chain
+
+# ╔═╡ 4b0c5f6e-551c-488f-8b39-0554a3603f69
+using Dates
+
+# ╔═╡ bba95138-19df-46b2-b301-983f23e10ab8
+using DataFrames
+
+# ╔═╡ 10517f24-bfde-11ec-1178-fdf753224f0c
+using HTTP
+
+# ╔═╡ b2dd3364-daa7-4504-bddc-1e3e3e11f7d6
+using JSON
+
+# ╔═╡ 54ea24e3-c599-4fe7-a4ac-569bb76a3b96
+using JSON3
+
+# ╔═╡ 28518be7-e166-4f85-a869-15d796ec1827
+using DataFrameMacros
+
+# ╔═╡ acac281d-e1e6-4ff7-9c42-9fd8f3a4d2f5
 md"""
-_Fabian Greimel_ | _Amsterdam, 7 Mar 2022_
+# Electricity prices
 """
 
-# ╔═╡ 2b03517f-7981-42e3-b68b-14d3c6320c09
-cover_letter = md"""
-# Cover letter
+# ╔═╡ 5e4c20e4-4e3e-4ea2-ae2d-5dcf98a47b1c
+parse_time(int) = Dates.unix2datetime(int ÷ 1_000)
 
-#### What I can contribute
-
-Over the past 10 years I have aquired the skills and a mindset that will be very useful for working at _Our World In Data_. I explored many different data sets. I created pipelines for my research projects that automatically build the figures, tables and the pdf of the paper on every committed code change. And I used visualizations of public data and simulation output to communicate ideas in my research and in the lecture room.
-
-Quite early in my undergraduate studies I came across **knitr**, an R package for literate programming. I got hooked for reproducible research in these days, using literate programming and open data APIs for my university theses and assignments ever since.
-
-I have become a _reproducibility nerd_. I have kept annoying my collaborators by insisting on using git repositories where results and the paper automatically generated on CI (see [my paper template](https://gitlab.com/greimel/sample-paper)).
-
-On the other hand, my students seem to enjoy that I try to provide them with code for every result I am showing in class. I set up a MSc level course where all the results are either derived by hand, or programmatically computed in **Pluto.jl** notebooks that I provide (see the [course website](https://greimel.github.io/networks-course)).
-Most of the code I am providing for this course is about creating visualizations (from downloaded or simulated data) in order to communicate ideas to my students.
-
-As a by-product of my endeavours, I have contributed to numerous open source projects (mostly Julia packages). I've also published some personal projects. Most relevant, I created [a package](https://github.com/greimel/DINA.jl) that automatically downloads, stores and cleans *Distributional National Accounts* data. I've also created templates for a [research paper](https://gitlab.com/greimel/sample-paper) that is built on Gitlab CI and a template for a [course website](https://github.com/greimel/pluto-course-template) based on Pluto.jl notebooks. 
-
-I've always used nothing but free open source software.
-
-#### Why I would give up my previous job
-
-Having a tenure track position at a decent university is a huge privilege. But it has become increasingly difficult for me to cope with the frequent negative feedback during research seminars and the frequent rejections from good journals.
-
-I have found myself to spend more and more time on activities that don't count for my tenure evaluation: exploring new data sets, improving teaching material and contributing to open source software. These are the things that I care about, and these things align very well with what I expect to be the work with _Our World in Data_.
-
-To conclude with a more personal note: As a father of two little sons, my place of residence now has the highest priority. I am currently a long-distance commuter to my workplace in Amsterdam. The job at _Our World in Data_, with its option to work fully remotely, would be an immense quality of life improvement for me and my family.
-"""
-
-# ╔═╡ 51c4aa0c-9bb3-11ec-0174-c73d599a839a
+# ╔═╡ 2424b6af-daa8-49d3-ad80-dcf302155026
 md"""
-# Part 1: Missing Data Sets
+# Calculating Solar Panels
 """
 
-# ╔═╡ ec3bd004-217e-4ca2-bf3c-0fd5addb53f2
-gid = md"""
-## Global Income Dynamics Project
+# ╔═╡ 93e8f1f4-8ec8-487a-b08d-eba03ac0fc1d
+kWp = 20
 
-[Global Income Dynamics (GID) Project](https://mebdi.org/global-income-dynamics-project/) – project lead by Fatih Guvenen (Minnesota), Luigi Pistaferri (Stanford) and Gianluca Violante (Princeton)
+# ╔═╡ 2542d461-e62e-4033-98bc-308539631bdc
+pa = 1000 * kWp
 
-*(The dataset is announced to be published in 2022.)*
+# ╔═╡ 68aa2779-c9c1-4ea9-87e7-833f2223d173
+michi = (26000-3) / 12.3
 
-### Description
-Starting in 2022, this database will provide a cross-country harmonized database of _rich micro statistics_ of the earnings distribution. The statistics are constructed from administrative panel data like tax and social security registers. The dataset will initially cover 13+ countries over several decades.
-
-### Strengths
-* This dataset allows for a much closer look into income inequality, making it possible to compare specific subgroups based on age, gender, ethnicity and residence.
-* Thanks to the underlying administrative panel data, it can also analyze changes in earnings dynamics. That is, how does the mobility across the income distribution compare across countries? How has this changes over time? Have earnings become riskier (more volatile) over time? Probably only for specific groups?
-
-"""
-
-# ╔═╡ 9a417f25-7cbf-471f-817e-bcf141d39859
-dina = md"""
-## Distributional National Accounts Data
-
-[US Distributional National Accounts](https://gabriel-zucman.eu/usdina/) – project lead by Thomas Piketty (Paris School of Economics), Gabriel Zucman (Berkeley), Emanuel Saez (Berkeley). 
-
-*(This dataset is underlying some of the US statistics of the **World Inequality Database**.)*
-
-### Description
-The data set provides micro data on income and wealth – split by age, gender and marital status – for the United States going back until 1913. The data set is constructed from administrative tax data, survey data and national accounts data.
-
-### Strengths
-
-* Using this data set one can cover the assets holdings and indebtedness of households across time and the income distribution. One can see, how the holdings of stocks have changed over time. Or, how the the debt burden is shifting. A version of the dataset with US state identifiers is available as well. This allows, for example, looking at the relationship between rising income inequality and rising mortage debt across states and time. I have used this version of the data set for my own research.
-"""
-
-# ╔═╡ b6307c8e-8990-4891-b8fc-5c179ee4d088
-scfp = md"""
-## SCF+
-
-[SCF+](https://www.moritzschularick.com/app/download/12556519199/JPE_data.zip.zip?t=1596647823) (an extended version of the Survey of Consumer Finances). By Moritz Kuhn, Moritz Schularick and Ulrike Steins, 2020, _Journal of Political Economy_.
-
-### Description
-
-The dataset extends the Survey of Consumer Finances from to the period 1949--2016. (The original SCF starts in 1983.) The survey covers income, financial assets (like stocks and bonds), non-financial assets (like housing) and debt (mortgages and non-mortgage debt).
-
-### Strengths
-
-The data set provides a different an extension to one of the most widely used data sets on household balance sheets. Given the existence of the DINA data set (see above), I would use the SCF+ data mostly to check if stylized facts are consistent with DINA.
-
-"""
-
-# ╔═╡ 6bb20426-93f1-4354-ab2b-8ee694a24dbc
+# ╔═╡ 3da36663-6898-40dc-b0b4-5e25c5354863
 md"""
-# Part 2: Showing some data
+* Anschaffungskosten (EUR pro kWp) $(@bind invest Slider(1600:100:2500, default = michi, show_value = true))
+* Strompreis $(@bind price PlutoUI.Slider(0.05:0.01:0.4, show_value=true, default = 0.1))
+  (Awattar 2021 EUR 0.1, derzeit 0.2)
 """
 
-# ╔═╡ 5b3d6413-e4bf-494e-8d1b-b30cb1954ca7
+# ╔═╡ 6268750b-b240-4e86-813c-498a1089a254
+anschaffung = invest * kWp
+
+# ╔═╡ 0053e2f7-1071-456f-b881-7de3921867f7
+revenue = pa * price
+
+# ╔═╡ d8a4bda7-b495-4d4e-a87b-2e09c74d355f
+saved_kw = 1500 # kWh
+
+# ╔═╡ 5caad563-6387-4fda-9a8a-438c3852d0c6
+saved = saved_kw * 2price # https://pvaustria.at/sonnenklar_rechner/
+
+# ╔═╡ 50ece353-f618-4f61-af3a-75f6096d6680
+amortisationszeit = anschaffung / (revenue + saved)
+
+# ╔═╡ dacaffe9-c0ee-43e0-adef-6d1de2771059
 md"""
-## Loading packages
+* Investitionssumme: $anschaffung
+* Amortisationszeit in Jahren: $(round(amortisationszeit, digits=2))
 """
 
-# ╔═╡ 0774c0f0-c9a1-4155-9b46-03ef5d519c60
+# ╔═╡ 19554911-d5d1-4617-9818-e26f4313cd25
 md"""
-## Loading and aggregating the data
-
-The dataset consists of one `.dta` file per year (1962--2019, total file size 3.4 GB). The only way to read data from `.dta` files involves copying the whole dataset at some point. This copying slows down everything.
+# Dachgröße
 """
 
-# ╔═╡ adf0979d-bbd6-4676-b5aa-c0a864b52eb3
+# ╔═╡ 5983a679-3567-454f-a505-e4578a77d65f
+breite = 6.3
+
+# ╔═╡ 21ee0bed-59fe-41b8-bcee-e3b7013d5b0c
+länge = 15.2
+
+# ╔═╡ ac5d2a35-30b9-4cbc-b6ff-21024abdcfcc
+neigung = 0
+
+# ╔═╡ 75e2a1c0-3e23-45a7-abdb-c805a8e85b24
+länge * breite
+
+# ╔═╡ 8e6596e1-d27d-48a4-8b31-1a07e7cd4cb8
+schuppen = 32 # m²
+
+# ╔═╡ a4a639d2-63ab-43cc-ab68-321430b4e6c9
+modul_leistung = 410 # watt peak pro modul
+
+# ╔═╡ b85beb21-170b-478f-b6b0-d93856adf57d
+modul_größe = 1.7 # m² pro modul
+
+# ╔═╡ e0777e07-442e-48d9-b846-a18aa39e5a59
+schuppen / modul_größe * modul_leistung / 1000
+
+# ╔═╡ fa9d44f8-bd87-43c6-b223-a01055b6923b
 md"""
-### Doing some sanity checks
+# Wärmepumpe
 """
 
-# ╔═╡ 99ac9ebd-2281-489d-8c07-e92191e1835d
-df80 = get_dina(2000) |> DataFrame
-
-# ╔═╡ 50e3c278-606b-4a40-ad3b-93c84aba02a3
-let df = df80
-	@assert df.ownerhome_heter + df.rentalhome        ≈ df.hwhou
-	@assert df.ownermort + df.rentalmort + df.nonmort ≈ df.hwdeb
-	@assert df.rentalhome + df.rentalmort             ≈ df.rental
-	@assert df.hwhou + df.ownermort + df.rentalmort   ≈ df.housing
-end
-
-# ╔═╡ 02c414cf-a116-42d8-9eec-6b58e1a50fa0
+# ╔═╡ 27ad7824-8fce-4419-91c4-8085a40a0643
 md"""
-### Specifying the variable names we want to keep
+## Heizwärmebedarf
 """
 
-# ╔═╡ b3e11e6e-ae0a-4a90-9a29-15b873b8db77
-assets = [:hwequ, :hwfix, :hwhou, :hwbus, :hwpen]
+# ╔═╡ 25fbfadc-1734-4490-a746-40adede1113a
+HWB = 50 # kwh/m2 a
 
-# ╔═╡ 5241151e-b192-44ab-b169-795f31022ecf
-wealth = filter(!=(:hwhou), assets) ∪ [:rental, :owner]
+# ╔═╡ 8b7cbca0-2ec0-4ed4-bef2-47e2cd4c986b
+wohnfläche = 200
 
-# ╔═╡ ce6e6773-d3cc-4dc3-9f59-089f80691fad
-housing = [:ownerhome_heter, :rentalhome] # == :hwhou
+# ╔═╡ 5b2abb1e-7f5a-47e2-a66a-559419329bd6
+energiebedarf(JAZ) = HWB * wohnfläche / JAZ # kWh
 
-# ╔═╡ 1b68e7cc-a3e3-4f75-8d84-a922a4555f0d
-assets2 = filter(!=(:hwhou), assets) ∪ housing
-
-# ╔═╡ e4d3e9da-558b-4b24-bfa2-d9ee70f65c2f
-debt = [:ownermort, :rentalmort, :nonmort] # == :hwdeb
-
-# ╔═╡ e39f1c77-f1a6-4ac5-aa6b-357e6afc46c6
-checks = [:hwhou, :hwdeb, :rental, :housing]
-
-# ╔═╡ 7a5d6141-b1e4-43d8-89fb-c8e38fc5b71e
-labels = Dict(
-	"ownerhome_heter" => "main residence",
-	"rentalhome" => "other property",
-	"hwequ" => "equities",
-	"hwpen" => "pension assets",
-	"hwbus" => "business assets",
-	"hwfix" => "other financial assets",
-	"owner" => "main residence (net)",
-	"rental"=> "other property (net)"
-)
-
-# ╔═╡ 974c16c4-72a3-4e45-81c2-a9163d97f4c9
+# ╔═╡ 2d3dfc81-9e1c-4765-b635-03f54a42fb76
 md"""
-### Loading the aggregate data
+#### Leistung und Energiepreise
 """
 
-# ╔═╡ 991776e6-9c6e-4a83-aa05-b2f702ef658d
-(; df) = let
-	inc = :peinc
-	wgt = :dweght
-
-	incs = [:fiinc, :fninc, :ptinc, inc, :poinc]
-	var = unique([assets; housing; debt; checks; incs])
-
-	byvar = inc # compute deciles of `:peinc`
-
-	df = dina_quantile_panel(var, byvar, 10)#, 1970:5:2015)
-
-	(; df)
-end
-
-# ╔═╡ 5ddef2ac-7e81-4c1e-be62-1557f953d563
+# ╔═╡ 53b52dd3-b563-44fc-af5e-8af63d9414f9
 md"""
-### Aggregate into three income groups
+[Jahrearbeitszahl](https://www.heizungsfinder.de/waermepumpe/wirtschaftlichkeit/jahresarbeitszahl#3)
 """
 
-# ╔═╡ bf451ba4-4fbb-4be2-8d49-2b090088de1f
+# ╔═╡ 9559b7f3-6910-4cad-8514-d748cfe08bdf
+JAZ_sonde = 4.25 # Jahresarbeitszahl 
+
+# ╔═╡ 521ea49c-9ca5-4a96-9f8b-884437726afa
+JAZ_luft = 2.75 # Jahresarbeitszahl
+
+# ╔═╡ 226b62e5-ddb5-4945-8de7-5fa5a2b14bdf
+gas_preis = 0.12 # durchblicker 13. Juni 2022
+
+# ╔═╡ e0498239-d59d-482d-9866-593526a7a3fd
+strom_preis = 0.3 # Durchblicker 13. Juni 2022
+
+# ╔═╡ 3f5f3b97-f618-4da1-8c06-082cfefe6274
 md"""
-Specify the variables to aggregate
+## Laufende Kosten
 """
 
-# ╔═╡ e1fb40b7-6cab-4729-90de-585912f6a483
-variables = Symbol.(names(df, Not([:age, :group_id, :dweght, :year, :three_groups])))
+# ╔═╡ d592a7b2-600a-4fd1-bf19-116818de6b5e
+gas_pa = energiebedarf(1.0) * gas_preis
 
-# ╔═╡ c77e12e7-31ff-4410-9257-547e514863bd
-three_groups_df = @chain df begin
-	@groupby(:year, :three_groups)
-	combine(
-		([var, :dweght] => ((x, w) -> mean(x, weights(w))) => var for var in variables)...,
-		:dweght => sum => :weights
-	)
-	@transform(:owner = :housing - :rental)
-end
+# ╔═╡ 3fdd07ba-491b-416c-b24d-62fbd8b526ec
+sonde_pa = energiebedarf(JAZ_sonde) * strom_preis
 
-# ╔═╡ 0bb8567b-d4cb-4278-b955-093f663a208b
+# ╔═╡ 5ada6126-f749-49d0-b481-47bf06febb06
+luft_pa = energiebedarf(JAZ_luft) * strom_preis
+
+# ╔═╡ 09cc60f5-18b3-470a-bbd9-dbf0fbad5e4a
+luft_pa - sonde_pa
+
+# ╔═╡ 7765837d-f36b-4412-a7be-a47e93f2ec47
+gas_pa - sonde_pa
+
+# ╔═╡ df6644b5-f38d-4b10-a66e-16fffec4e9f3
 md"""
-### Asset/Wealth decomposition of households
-
-**Description** The above figure below shows how household's asset portfolios have changed over the past decades. The figure only shows three main categories: equities (mostly stocks), pension assets and main residence (net of outstanding mortgage) by income group.
-
-1. The figure shows that equities acount for only a very small share the portfolios of the bottom 90% of the income distribution. (This is represenatative of other financial assets.) 
-2. Pension assets have become ever more important over the decades. They are now the more important then the main residence and equities across the whole income distribution.
-3. One other interesting fact here is that for the top 10 percent, stocks and housing seem to be substitutes. The portfolio shares more or less mirror each other.
+## Anschaffungskosten
 """
 
-# ╔═╡ 70291a3d-a0f4-49c6-8745-abe745ee82b5
-let
-	
-	fig = @chain three_groups_df begin
-	#	stack(assets2, [:year, :three_groups])
-		stack(wealth, [:year, :three_groups])
-		@transform(:variable = @c recode(:variable, labels...))
-		@groupby(:year, :three_groups)
-		@combine(@t begin
-					abs = :value
-					total = sum(abs)
-					:share = abs ./ total
-					:abs = abs
-					:variable = :variable
-		end)
-		@subset(:variable ∈ getindex.(Ref(labels), ["hwpen", "hwequ", "owner"]))
-		data(_) * mapping(
-			:year,
-			:share => "share of wealth",
-			color = :variable => "",
-			layout = :three_groups => "income group"
-		) * visual(Lines)
-		draw(legend = (position = :bottom, titleposition = :left, nbanks = 1))
-	end
-	Label(fig.figure[0,:], "What assets do US households own?")
-	fig
-end
+# ╔═╡ f4acacb5-c8c8-49a0-b7a5-7942d067cd9a
 
-# ╔═╡ 71242024-569f-47bc-9276-e1dbd832ad0f
+
+# ╔═╡ a8a1d8f3-7219-4f6b-b135-71f74eb1a2c5
+md"""
+### Wärmepumpe
+[Übersicht über Förderungen](https://www.waermepumpe-austria.at/foerderungen)
+* Bundesförderung 7500 Euro
+* NÖ Landesförderung 3000 Euro bis Ende 2022
+
+### Sanierung
+* Bund: [Sanierungsscheck](https://www.umweltfoerderung.at/fileadmin/user_upload/media/umweltfoerderung/Dokumente_Private/TGS_Priv_2021/Infoblatt_sanierungsscheck_2021_2022_EFH.pdf) ca 9000
+* Land NÖ: [Eigenheimsanierung](https://www.noe.gv.at/noe/Sanieren-Renovieren/NWBF_21_006_EHS-Broschuere_20210622_ES.pdf) 6000 (9000 wenn nachwachsende Rohstoffe)
+
+### Notizen
+Höhere Förderung innerhalb 3 Jahre nach Hauskauf
+
+### Vergleich Wärmepumpen
+
+https://geothermie-schweiz.ch/lebensdauer-von-sole-wasser-waermepumpen-betraegt-fast-30-jahre/
+"""
+
+# ╔═╡ 0d177910-d9cd-4c04-a53d-0d500cb9c555
+luft = (anschaffung = 11_000 - min(7500, 0.5 * 11_000) - min(3000, 0.2 * 11_000),)
+
+# ╔═╡ 013fd307-1265-4f71-91ff-9ed6a6630d31
+flächenkollektor = (anschaffung = 16_000 - 7500 - 3000, )
+
+# ╔═╡ 608916e6-27b8-4309-9c9f-8eb28af4f013
+sonde = (anschaffung = 27_000 - 7500 - 3000, )
+
+# ╔═╡ 96a7b079-c3e6-46de-ab76-b8ab6f4d84cc
+(sonde.anschaffung - luft.anschaffung) / (luft_pa - sonde_pa)
+
+# ╔═╡ 5d5af0ae-9a7a-459d-9e95-1cbba7ed67be
 md"""
 # Appendix
 """
 
-# ╔═╡ 90b9be8d-f4de-4ba7-bbd3-16f210d3595a
+# ╔═╡ a4afbec4-6358-4408-b8f9-a41bf8ade392
 TableOfContents()
 
-# ╔═╡ 73701b0b-d331-47ff-9782-d24572d35172
-function wordcount(text)
-	stripped_text = strip(replace(string(text), r"\s" => " "))
-   	words = split(stripped_text, (' ', '-', '.', ',', ':', '_', '"', ';', '!', '\''))
-   	length(filter(!=(""), words))
-end
-
-# ╔═╡ 041a1ad2-ecb0-4f14-b911-ba18c571e49b
-md"
-*approximately $(wordcount(cover_letter)) words*
-"
-
-# ╔═╡ 688f4613-d8f9-4f39-b8a0-3fea94760a09
-wordcount(gid)
-
-# ╔═╡ a92573ea-3ec5-4e23-959f-23a42cfd351c
-wordcount(dina)
-
-# ╔═╡ 666b2dba-511f-4293-88ce-a37db494e8ee
+# ╔═╡ 173a609f-5033-44c0-a2bd-56263bb2f031
 md"""
-## Some other plots
+## Packages
 """
 
-# ╔═╡ 6f324ac1-9277-493a-a44b-a68d68f15709
-@chain three_groups_df begin
-	@groupby(:year, :three_groups)
-	@transform(:leverage = -:ownermort / :ownerhome_heter)
-	data(_) * mapping(
-		:year,
-		:leverage,
-		#stack = :variable,
-		color = :three_groups => "income group"
-	) * visual(Lines)
+# ╔═╡ d36d5273-2a75-46c8-9703-e0e100a8a44b
+function url(from, to=nothing)
+	epch_from = Int(datetime2unix(DateTime(from)) * 1_000)
+	url = "https://api.awattar.at/v1/marketdata?start=$epch_from"
+
+	if !isnothing(to)
+		epch_to = Int(datetime2unix(DateTime(to)) * 1_000)
+		url = url * "&end=$epch_to"
+	end
+	url
+end
+
+# ╔═╡ 47a4c430-8dc2-4a8e-a597-9855e3a3c601
+resp = HTTP.get(url(Date(2000, 1, 1), now())).body |> String |> JSON3.read
+
+# ╔═╡ 16e40b8a-30da-4cef-8263-fd06ca9153e0
+df = DataFrame(resp.data)
+
+# ╔═╡ b15a98b3-49ba-4ce5-b7b3-29d032f8ce1c
+df2 = @chain df begin
+	@transform(
+		:start = parse_time(:start_timestamp),
+		:end   = parse_time(:end_timestamp)
+	)
+	@transform(
+		:date  = Date(:start),
+		:year  = year(:start),
+		:month = month(:start)
+	)
+	@select(
+		:year, :month,
+		:date  = Date(:year, :month),
+	#	:month = month(:start),
+		:time  = Time(:start),
+		:marketprice, :unit
+	)
+end
+
+# ╔═╡ dfdcdc9e-acc1-416b-9fb1-25eb541984bd
+@chain df2 begin
+	@subset(2020 ≤ :year)
+#	@groupby(:date, :month, :year)
+	#@transform(:quarter = :month ÷ 4)
+	#@groupby(:year, :quarter)
+	@groupby(:year, :month)
+	@combine(
+		:price = mean(:marketprice) / 1000,
+		:date = Date.(first(:year), first(:month))
+		)
+	data(_) * mapping(:date, :price,
+		#color = :year => nonnumeric
+	) * visual(ScatterLines)
 	draw
 end
 
-# ╔═╡ bf793cd4-f6ab-489f-a8dc-d826862d59e0
-@chain three_groups_df begin
-	@groupby(:year, :three_groups)
-	@transform(:new_variable = :owner / :peinc)
-	data(_) * mapping(
-		:year,
-		:new_variable => "equity-to-income ratio",
-		#stack = :variable,
-		color = :three_groups => "income group"
-	) * visual(Lines)
+# ╔═╡ 7170f333-d433-4433-b497-122ac738639b
+@chain df2 begin
+	@subset(2017 < :year < 2020)
+#	@groupby(:date, :month, :year)
+	@groupby(:month)
+	@combine(:price = mean(:marketprice) / 1000)
+	data(_) * mapping(:month, :price,
+		#color = :year => nonnumeric
+	) * visual(ScatterLines)
 	draw
 end
 
-# ╔═╡ b7bf809c-8083-4228-81f2-88273387eacb
-@chain three_groups_df begin
-	@groupby(:year, :three_groups)
-	@transform(:new_variable = :ownerhome_heter / :peinc)
-	data(_) * mapping(
-		:year,
-		:new_variable => "",
-		#stack = :variable,
-		color = :three_groups => "income group"
-	) * visual(Lines)
-	draw
-end
+# ╔═╡ 5b9e4ddc-97ef-481a-80bf-1eaeaaf3d182
+import CSV
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 AlgebraOfGraphics = "cbdf2221-f076-402e-a563-3d30da359d67"
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
-CategoricalArrays = "324d7699-5711-5eae-9e2f-1d82baa6b597"
 Chain = "8be319e6-bccf-4806-a6f7-6fae938471bc"
-DINA = "2e9d5fb1-712f-4dff-9379-c18f12b3746d"
 DataFrameMacros = "75880514-38bc-4a95-a458-c2aea5a3a702"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
-StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]
 AlgebraOfGraphics = "~0.6.5"
-CairoMakie = "~0.7.4"
-CategoricalArrays = "~0.10.3"
+CSV = "~0.10.4"
+CairoMakie = "~0.7.5"
 Chain = "~0.4.10"
-DINA = "~0.1.3"
 DataFrameMacros = "~0.2.1"
 DataFrames = "~1.3.2"
-PlutoUI = "~0.7.35"
-StatsBase = "~0.33.16"
+HTTP = "~0.9.17"
+JSON = "~0.21.3"
+JSON3 = "~1.9.4"
+PlutoUI = "~0.7.38"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -405,9 +385,9 @@ uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
 
 [[deps.ArrayInterface]]
 deps = ["Compat", "IfElse", "LinearAlgebra", "Requires", "SparseArrays", "Static"]
-git-tree-sha1 = "d49f55ff9c7ee06930b0f65b1df2bfa811418475"
+git-tree-sha1 = "c933ce606f6535a7c7b98e1d86d5d1014f730596"
 uuid = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
-version = "4.0.4"
+version = "5.0.7"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -427,12 +407,6 @@ version = "1.0.1"
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
-[[deps.BinaryProvider]]
-deps = ["Libdl", "Logging", "SHA"]
-git-tree-sha1 = "ecdec412a9abc8db54c0efc5548c64dfce072058"
-uuid = "b99e7846-7c00-51b0-8f62-c81ae34c0232"
-version = "0.5.10"
-
 [[deps.Bzip2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "19a35467a82e236ff51bc17a3a44b69ef35185a2"
@@ -444,6 +418,12 @@ git-tree-sha1 = "215a9aa4a1f23fbd05b92769fdd62559488d70e9"
 uuid = "fa961155-64e5-5f13-b03f-caf6b980ea82"
 version = "0.4.1"
 
+[[deps.CSV]]
+deps = ["CodecZlib", "Dates", "FilePathsBase", "InlineStrings", "Mmap", "Parsers", "PooledArrays", "SentinelArrays", "Tables", "Unicode", "WeakRefStrings"]
+git-tree-sha1 = "873fb188a4b9d76549b81465b1f75c82aaf59238"
+uuid = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+version = "0.10.4"
+
 [[deps.Cairo]]
 deps = ["Cairo_jll", "Colors", "Glib_jll", "Graphics", "Libdl", "Pango_jll"]
 git-tree-sha1 = "d0b3f8b4ad16cb0a2988c6788646a5e6a17b6b1b"
@@ -452,27 +432,15 @@ version = "1.0.5"
 
 [[deps.CairoMakie]]
 deps = ["Base64", "Cairo", "Colors", "FFTW", "FileIO", "FreeType", "GeometryBasics", "LinearAlgebra", "Makie", "SHA", "StaticArrays"]
-git-tree-sha1 = "aedc7c910713eb616391cf95218277b714a7913f"
+git-tree-sha1 = "4a0de4f5aa2d5d27a1efa293aeabb1a081e46b2b"
 uuid = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
-version = "0.7.4"
+version = "0.7.5"
 
 [[deps.Cairo_jll]]
 deps = ["Artifacts", "Bzip2_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "JLLWrappers", "LZO_jll", "Libdl", "Pixman_jll", "Pkg", "Xorg_libXext_jll", "Xorg_libXrender_jll", "Zlib_jll", "libpng_jll"]
 git-tree-sha1 = "4b859a208b2397a7a623a03449e4636bdb17bcf2"
 uuid = "83423d85-b0ee-5818-9007-b63ccbeb887a"
 version = "1.16.1+1"
-
-[[deps.Calculus]]
-deps = ["LinearAlgebra"]
-git-tree-sha1 = "f641eb0a4f00c343bbc32346e1217b86f3ce9dad"
-uuid = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
-version = "0.5.1"
-
-[[deps.CategoricalArrays]]
-deps = ["DataAPI", "Future", "Missings", "Printf", "Requires", "Statistics", "Unicode"]
-git-tree-sha1 = "3b60064cb48efe986179359e08ffb568a6d510a2"
-uuid = "324d7699-5711-5eae-9e2f-1d82baa6b597"
-version = "0.10.3"
 
 [[deps.Chain]]
 git-tree-sha1 = "339237319ef4712e6e5df7758d0bccddf5c237d9"
@@ -481,15 +449,21 @@ version = "0.4.10"
 
 [[deps.ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "c9a6160317d1abe9c44b3beb367fd448117679ca"
+git-tree-sha1 = "9950387274246d08af38f6eef8cb5480862a435f"
 uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-version = "1.13.0"
+version = "1.14.0"
 
 [[deps.ChangesOfVariables]]
 deps = ["ChainRulesCore", "LinearAlgebra", "Test"]
 git-tree-sha1 = "bf98fa45a0a4cee295de98d4c1462be26345b9a1"
 uuid = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
 version = "0.1.2"
+
+[[deps.CodecZlib]]
+deps = ["TranscodingStreams", "Zlib_jll"]
+git-tree-sha1 = "ded953804d019afa9a3f98981d99b33e3db7b6da"
+uuid = "944b1d66-785c-5afd-91f1-9de20f533193"
+version = "0.7.0"
 
 [[deps.ColorBrewer]]
 deps = ["Colors", "JSON", "Test"]
@@ -523,9 +497,9 @@ version = "0.12.8"
 
 [[deps.Compat]]
 deps = ["Base64", "Dates", "DelimitedFiles", "Distributed", "InteractiveUtils", "LibGit2", "Libdl", "LinearAlgebra", "Markdown", "Mmap", "Pkg", "Printf", "REPL", "Random", "SHA", "Serialization", "SharedArrays", "Sockets", "SparseArrays", "Statistics", "Test", "UUIDs", "Unicode"]
-git-tree-sha1 = "44c37b4636bc54afac5c574d2d02b625349d6582"
+git-tree-sha1 = "b153278a25dd42c65abbf4e62344f9d22e59191b"
 uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
-version = "3.41.0"
+version = "3.43.0"
 
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -542,22 +516,10 @@ git-tree-sha1 = "249fe38abf76d48563e2f4556bebd215aa317e15"
 uuid = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
 version = "4.1.1"
 
-[[deps.DINA]]
-deps = ["CategoricalArrays", "Chain", "DataDeps", "DataFrames", "LinearAlgebra", "ReadableRegex", "StatFiles", "Statistics", "StatsBase", "TableOperations"]
-git-tree-sha1 = "8e8af8b3028642ebf499bdc0f1ea6d8591543d5c"
-uuid = "2e9d5fb1-712f-4dff-9379-c18f12b3746d"
-version = "0.1.3"
-
 [[deps.DataAPI]]
 git-tree-sha1 = "cc70b17275652eb47bc9e5f81635981f13cea5c8"
 uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
 version = "1.9.0"
-
-[[deps.DataDeps]]
-deps = ["BinaryProvider", "HTTP", "Libdl", "Reexport", "SHA", "p7zip_jll"]
-git-tree-sha1 = "4f0e41ff461d42cfc62ff0de4f1cd44c6e6b3771"
-uuid = "124859b0-ceae-595e-8997-d05f6a7a8dfe"
-version = "0.7.7"
 
 [[deps.DataFrameMacros]]
 deps = ["DataFrames"]
@@ -582,12 +544,6 @@ git-tree-sha1 = "bfc1187b79289637fa0ef6d4436ebdfe6905cbd6"
 uuid = "e2d170a0-9d28-54be-80f0-106bbe20a464"
 version = "1.0.0"
 
-[[deps.DataValues]]
-deps = ["DataValueInterfaces", "Dates"]
-git-tree-sha1 = "d88a19299eba280a6d062e135a43f00323ae70bf"
-uuid = "e7dc6d0d-1eca-5fa6-8ad6-5aecde8b7ea5"
-version = "0.4.13"
-
 [[deps.Dates]]
 deps = ["Printf"]
 uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
@@ -604,9 +560,9 @@ version = "0.4.0"
 
 [[deps.Dictionaries]]
 deps = ["Indexing", "Random"]
-git-tree-sha1 = "63004a55faf43a5f7be7f5eca36ce355e9a75b2c"
+git-tree-sha1 = "0340cee29e3456a7de968736ceeb705d591875a2"
 uuid = "85a47980-9c8c-11e8-2b9f-f7ca1fa99fb4"
-version = "0.3.18"
+version = "0.3.20"
 
 [[deps.Distances]]
 deps = ["LinearAlgebra", "SparseArrays", "Statistics", "StatsAPI"]
@@ -620,9 +576,9 @@ uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[deps.Distributions]]
 deps = ["ChainRulesCore", "DensityInterface", "FillArrays", "LinearAlgebra", "PDMats", "Printf", "QuadGK", "Random", "SparseArrays", "SpecialFunctions", "Statistics", "StatsBase", "StatsFuns", "Test"]
-git-tree-sha1 = "9d3c0c762d4666db9187f363a76b47f7346e673b"
+git-tree-sha1 = "5a4168170ede913a2cd679e53c2123cb4b889795"
 uuid = "31c24e10-a181-5473-b8eb-7969acd0382f"
-version = "0.25.49"
+version = "0.25.53"
 
 [[deps.DocStringExtensions]]
 deps = ["LibGit2"]
@@ -634,12 +590,6 @@ version = "0.8.6"
 deps = ["ArgTools", "LibCURL", "NetworkOptions"]
 uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 
-[[deps.DualNumbers]]
-deps = ["Calculus", "NaNMath", "SpecialFunctions"]
-git-tree-sha1 = "84f04fe68a3176a583b864e492578b9466d87f1e"
-uuid = "fa6b7ba4-c1ee-5f82-b5fc-ecf0adba8f74"
-version = "0.6.6"
-
 [[deps.EarCut_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "3f3a2501fa7236e9b911e0f7a588c657e822bb6d"
@@ -648,15 +598,15 @@ version = "2.2.3+0"
 
 [[deps.EllipsisNotation]]
 deps = ["ArrayInterface"]
-git-tree-sha1 = "d7ab55febfd0907b285fbf8dc0c73c0825d9d6aa"
+git-tree-sha1 = "d064b0340db45d48893e7604ec95e7a2dc9da904"
 uuid = "da5c29d0-fa7d-589e-88eb-ea29b0a81949"
-version = "1.3.0"
+version = "1.5.0"
 
 [[deps.Expat_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "ae13fcbc7ab8f16b0856729b050ef0c446aa3492"
+git-tree-sha1 = "bad72f730e9e91c08d9427d5e8db95478a3c323d"
 uuid = "2e619515-83b5-522b-bb60-26c02a35a201"
-version = "2.4.4+0"
+version = "2.4.8+0"
 
 [[deps.FFMPEG]]
 deps = ["FFMPEG_jll"]
@@ -688,11 +638,17 @@ git-tree-sha1 = "80ced645013a5dbdc52cf70329399c35ce007fae"
 uuid = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
 version = "1.13.0"
 
+[[deps.FilePathsBase]]
+deps = ["Compat", "Dates", "Mmap", "Printf", "Test", "UUIDs"]
+git-tree-sha1 = "129b104185df66e408edd6625d480b7f9e9823a0"
+uuid = "48062228-2e41-5def-b9a4-89aafe57970f"
+version = "0.9.18"
+
 [[deps.FillArrays]]
 deps = ["LinearAlgebra", "Random", "SparseArrays", "Statistics"]
-git-tree-sha1 = "4c7d3757f3ecbcb9055870351078552b7d1dbd2d"
+git-tree-sha1 = "246621d23d1f43e3b9c368bf3b72b2331a27c286"
 uuid = "1a297f60-69ca-5386-bcde-b61e274b549b"
-version = "0.13.0"
+version = "0.13.2"
 
 [[deps.FixedPointNumbers]]
 deps = ["Statistics"]
@@ -725,10 +681,10 @@ uuid = "d7e528f0-a631-5988-bf34-fe36492bcfd7"
 version = "2.10.4+0"
 
 [[deps.FreeTypeAbstraction]]
-deps = ["ColorVectorSpace", "Colors", "FreeType", "GeometryBasics", "StaticArrays"]
-git-tree-sha1 = "770050893e7bc8a34915b4b9298604a3236de834"
+deps = ["ColorVectorSpace", "Colors", "FreeType", "GeometryBasics"]
+git-tree-sha1 = "b5c7fe9cea653443736d264b85466bad8c574f4a"
 uuid = "663a7486-cb36-511b-a19d-713bb74d65c9"
-version = "0.9.5"
+version = "0.9.9"
 
 [[deps.FriBidi_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -742,9 +698,9 @@ uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
 
 [[deps.GLM]]
 deps = ["Distributions", "LinearAlgebra", "Printf", "Reexport", "SparseArrays", "SpecialFunctions", "Statistics", "StatsBase", "StatsFuns", "StatsModels"]
-git-tree-sha1 = "fb764dacfa30f948d52a6a4269ae293a479bbc62"
+git-tree-sha1 = "92b8d38886445d6d06e5f13201e57d018c4ff880"
 uuid = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
-version = "1.6.1"
+version = "1.7.0"
 
 [[deps.GeoInterface]]
 deps = ["RecipesBase"]
@@ -804,12 +760,6 @@ deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll",
 git-tree-sha1 = "129acf094d168394e80ee1dc4bc06ec835e510a3"
 uuid = "2e76f6c2-a576-52d4-95c1-20adfe4de566"
 version = "2.8.1+1"
-
-[[deps.HypergeometricFunctions]]
-deps = ["DualNumbers", "LinearAlgebra", "SpecialFunctions", "Test"]
-git-tree-sha1 = "65e4589030ef3c44d3b90bdc5aac462b4bb05567"
-uuid = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
-version = "0.3.8"
 
 [[deps.Hyperscript]]
 deps = ["Test"]
@@ -871,6 +821,12 @@ git-tree-sha1 = "f550e6e32074c939295eb5ea6de31849ac2c9625"
 uuid = "83e8ac13-25f8-5344-8a64-a9f2b223428f"
 version = "0.5.1"
 
+[[deps.InlineStrings]]
+deps = ["Parsers"]
+git-tree-sha1 = "61feba885fac3a407465726d0c330b3055df897f"
+uuid = "842dd82b-1e85-43dc-bf29-5d0ee9dffc48"
+version = "1.1.2"
+
 [[deps.IntelOpenMP_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "d979e54b71da82f3a65b62553da4fc3d18c9004c"
@@ -889,15 +845,15 @@ version = "0.13.5"
 
 [[deps.IntervalSets]]
 deps = ["Dates", "EllipsisNotation", "Statistics"]
-git-tree-sha1 = "3cc368af3f110a767ac786560045dceddfc16758"
+git-tree-sha1 = "bcf640979ee55b652f3b01650444eb7bbe3ea837"
 uuid = "8197267c-284f-5f27-9208-e0e47529a953"
-version = "0.5.3"
+version = "0.5.4"
 
 [[deps.InverseFunctions]]
 deps = ["Test"]
-git-tree-sha1 = "a7254c0acd8e62f1ac75ad24d5db43f5f19f3c65"
+git-tree-sha1 = "91b5dcf362c5add98049e6c29ee756910b03051d"
 uuid = "3587e190-3f89-42d0-90ee-14403ec27112"
-version = "0.1.2"
+version = "0.1.3"
 
 [[deps.InvertedIndices]]
 git-tree-sha1 = "bee5f1ef5bf65df56bdd2e40447590b272a5471f"
@@ -920,12 +876,6 @@ git-tree-sha1 = "fa6287a4469f5e048d763df38279ee729fbd44e5"
 uuid = "c8e1da08-722c-5040-9ed9-7db0dc04731e"
 version = "1.4.0"
 
-[[deps.IterableTables]]
-deps = ["DataValues", "IteratorInterfaceExtensions", "Requires", "TableTraits", "TableTraitsUtils"]
-git-tree-sha1 = "70300b876b2cebde43ebc0df42bc8c94a144e1b4"
-uuid = "1c8ee90f-4401-5389-894e-7a04a3dc0f4d"
-version = "1.0.0"
-
 [[deps.IteratorInterfaceExtensions]]
 git-tree-sha1 = "a3f24677c21f5bbe9d2a714f95dcd58337fb2856"
 uuid = "82899510-4779-5014-852e-03e436cf321d"
@@ -942,6 +892,12 @@ deps = ["Dates", "Mmap", "Parsers", "Unicode"]
 git-tree-sha1 = "3c837543ddb02250ef42f4738347454f95079d4e"
 uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 version = "0.21.3"
+
+[[deps.JSON3]]
+deps = ["Dates", "Mmap", "Parsers", "StructTypes", "UUIDs"]
+git-tree-sha1 = "8c1f668b24d999fb47baf80436194fdccec65ad2"
+uuid = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+version = "1.9.4"
 
 [[deps.JpegTurbo]]
 deps = ["CEnum", "FileIO", "ImageCore", "JpegTurbo_jll", "TOML"]
@@ -1049,9 +1005,9 @@ version = "0.5.4"
 
 [[deps.LogExpFunctions]]
 deps = ["ChainRulesCore", "ChangesOfVariables", "DocStringExtensions", "InverseFunctions", "IrrationalConstants", "LinearAlgebra"]
-git-tree-sha1 = "e5718a00af0ab9756305a0392832c8952c7426c1"
+git-tree-sha1 = "a970d55c2ad8084ca317a4658ba6ce99b7523571"
 uuid = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
-version = "0.3.6"
+version = "0.3.12"
 
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
@@ -1064,9 +1020,9 @@ version = "2022.0.0+0"
 
 [[deps.Makie]]
 deps = ["Animations", "Base64", "ColorBrewer", "ColorSchemes", "ColorTypes", "Colors", "Contour", "Distributions", "DocStringExtensions", "FFMPEG", "FileIO", "FixedPointNumbers", "Formatting", "FreeType", "FreeTypeAbstraction", "GeometryBasics", "GridLayoutBase", "ImageIO", "IntervalSets", "Isoband", "KernelDensity", "LaTeXStrings", "LinearAlgebra", "MakieCore", "Markdown", "Match", "MathTeXEngine", "Observables", "OffsetArrays", "Packing", "PlotUtils", "PolygonOps", "Printf", "Random", "RelocatableFolders", "Serialization", "Showoff", "SignedDistanceFields", "SparseArrays", "StaticArrays", "Statistics", "StatsBase", "StatsFuns", "StructArrays", "UnicodeFun"]
-git-tree-sha1 = "cd0fd02ab0d129f03515b7b68ca77fb670ef2e61"
+git-tree-sha1 = "63de3b8a5c1f764e4e3a036c7752a632b4f0b8d1"
 uuid = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
-version = "0.16.5"
+version = "0.16.6"
 
 [[deps.MakieCore]]
 deps = ["Observables"]
@@ -1175,9 +1131,9 @@ uuid = "05823500-19ac-5b8b-9628-191a04bc5112"
 
 [[deps.OpenSSL_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "648107615c15d4e09f7eca16307bc821c1f718d8"
+git-tree-sha1 = "ab05aa4cc89736e95915b01e7279e61b1bfe33b8"
 uuid = "458c3c95-2e84-50aa-8efc-19380b2a3a95"
-version = "1.1.13+0"
+version = "1.1.14+0"
 
 [[deps.OpenSpecFun_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Pkg"]
@@ -1204,9 +1160,9 @@ version = "8.44.0+0"
 
 [[deps.PDMats]]
 deps = ["LinearAlgebra", "SparseArrays", "SuiteSparse"]
-git-tree-sha1 = "7e2166042d1698b6072352c74cfd1fca2a968253"
+git-tree-sha1 = "e8185b83b9fc56eb6456200e873ce598ebc7f262"
 uuid = "90014a1f-27ba-587c-ab20-58faa44d9150"
-version = "0.11.6"
+version = "0.11.7"
 
 [[deps.PNGFiles]]
 deps = ["Base64", "CEnum", "ImageCore", "IndirectArrays", "OffsetArrays", "libpng_jll"]
@@ -1234,9 +1190,9 @@ version = "1.50.3+0"
 
 [[deps.Parsers]]
 deps = ["Dates"]
-git-tree-sha1 = "13468f237353112a01b2d6b32f3d0f80219944aa"
+git-tree-sha1 = "621f4f3b4977325b9128d5fae7a8b4829a0c2222"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-version = "2.2.2"
+version = "2.2.4"
 
 [[deps.Pixman_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1256,15 +1212,15 @@ version = "0.1.1"
 
 [[deps.PlotUtils]]
 deps = ["ColorSchemes", "Colors", "Dates", "Printf", "Random", "Reexport", "Statistics"]
-git-tree-sha1 = "6f1b25e8ea06279b5689263cc538f51331d7ca17"
+git-tree-sha1 = "bb16469fd5224100e422f0b027d26c5a25de1200"
 uuid = "995b91a9-d308-5afd-9ec6-746e21dbc043"
-version = "1.1.3"
+version = "1.2.0"
 
 [[deps.PlutoUI]]
 deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "Markdown", "Random", "Reexport", "UUIDs"]
-git-tree-sha1 = "85bf3e4bd279e405f91489ce518dedb1e32119cb"
+git-tree-sha1 = "670e559e5c8e191ded66fa9ea89c97f10376bb4c"
 uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-version = "0.7.35"
+version = "0.7.38"
 
 [[deps.PolygonOps]]
 git-tree-sha1 = "77b3d3605fc1cd0b42d95eba87dfcd2bf67d5ff6"
@@ -1273,15 +1229,15 @@ version = "0.1.2"
 
 [[deps.PooledArrays]]
 deps = ["DataAPI", "Future"]
-git-tree-sha1 = "db3a23166af8aebf4db5ef87ac5b00d36eb771e2"
+git-tree-sha1 = "28ef6c7ce353f0b35d0df0d5930e0d072c1f5b9b"
 uuid = "2dfb63ee-cc39-5dd5-95bd-886bf059d720"
-version = "1.4.0"
+version = "1.4.1"
 
 [[deps.Preferences]]
 deps = ["TOML"]
-git-tree-sha1 = "de893592a221142f3db370f48290e3a2ef39998f"
+git-tree-sha1 = "d3538e7f8a790dc8903519090857ef8e1283eecd"
 uuid = "21216c6a-2e73-6563-6e65-726566657250"
-version = "1.2.4"
+version = "1.2.5"
 
 [[deps.PrettyTables]]
 deps = ["Crayons", "Formatting", "Markdown", "Reexport", "Tables"]
@@ -1295,9 +1251,9 @@ uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
 [[deps.ProgressMeter]]
 deps = ["Distributed", "Printf"]
-git-tree-sha1 = "afadeba63d90ff223a6a48d2009434ecee2ec9e8"
+git-tree-sha1 = "d7a7aef8f8f2d537104f170139553b14dfe39fe9"
 uuid = "92933f4c-e287-5a05-a399-4b506db050ca"
-version = "1.7.1"
+version = "1.7.2"
 
 [[deps.QOI]]
 deps = ["ColorTypes", "FileIO", "FixedPointNumbers"]
@@ -1324,23 +1280,6 @@ deps = ["Requires"]
 git-tree-sha1 = "dc84268fe0e3335a62e315a3a7cf2afa7178a734"
 uuid = "c84ed2f1-dad5-54f0-aa8e-dbefe2724439"
 version = "0.4.3"
-
-[[deps.ReadStat]]
-deps = ["DataValues", "Dates", "ReadStat_jll"]
-git-tree-sha1 = "f8652515b68572d3362ee38e32245249413fb2d7"
-uuid = "d71aba96-b539-5138-91ee-935c3ee1374c"
-version = "1.1.1"
-
-[[deps.ReadStat_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Libiconv_jll", "Pkg", "Zlib_jll"]
-git-tree-sha1 = "afd287b1031406b3ec5d835a60b388ceb041bb63"
-uuid = "a4dc8951-f1cc-5499-9034-9ec1c3e64557"
-version = "1.1.5+0"
-
-[[deps.ReadableRegex]]
-git-tree-sha1 = "befcfa33f50688319571a770be4a55114b71d70a"
-uuid = "cbbcb084-453d-4c4c-b292-e315607ba6a4"
-version = "0.3.2"
 
 [[deps.RecipesBase]]
 git-tree-sha1 = "6bf3f380ff52ce0832ddd3a2a7b9538ed1bcca7d"
@@ -1380,9 +1319,9 @@ version = "0.3.0+0"
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 
 [[deps.SIMD]]
-git-tree-sha1 = "39e3df417a0dd0c4e1f89891a281f82f5373ea3b"
+git-tree-sha1 = "7dbc15af7ed5f751a82bf3ed37757adf76c32402"
 uuid = "fdea26ae-647d-5447-a871-4b548cad5224"
-version = "3.4.0"
+version = "3.4.1"
 
 [[deps.ScanByte]]
 deps = ["Libdl", "SIMD"]
@@ -1457,23 +1396,17 @@ git-tree-sha1 = "46e589465204cd0c08b4bd97385e4fa79a0c770c"
 uuid = "cae243ae-269e-4f55-b966-ac2d0dc13c15"
 version = "0.1.1"
 
-[[deps.StatFiles]]
-deps = ["DataValues", "FileIO", "IterableTables", "IteratorInterfaceExtensions", "ReadStat", "TableShowUtils", "TableTraits", "TableTraitsUtils", "Test"]
-git-tree-sha1 = "28466ea10caec61c476a262172319d2edf248187"
-uuid = "1463e38c-9381-5320-bcd4-4134955f093a"
-version = "0.8.0"
-
 [[deps.Static]]
 deps = ["IfElse"]
-git-tree-sha1 = "65068e4b4d10f3c31aaae2e6cb92b6c6cedca610"
+git-tree-sha1 = "87e9954dfa33fd145694e42337bdd3d5b07021a6"
 uuid = "aedffcd0-7271-4cad-89d0-dc628f76c6d3"
-version = "0.5.6"
+version = "0.6.0"
 
 [[deps.StaticArrays]]
 deps = ["LinearAlgebra", "Random", "Statistics"]
-git-tree-sha1 = "74fb527333e72ada2dd9ef77d98e4991fb185f04"
+git-tree-sha1 = "4f6ec5d99a28e1a749559ef7dd518663c5eca3d5"
 uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "1.4.1"
+version = "1.4.3"
 
 [[deps.Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
@@ -1481,9 +1414,9 @@ uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [[deps.StatsAPI]]
 deps = ["LinearAlgebra"]
-git-tree-sha1 = "c3d8ba7f3fa0625b062b82853a7d5229cb728b6b"
+git-tree-sha1 = "8d7530a38dbd2c397be7ddd01a424e4f411dcc41"
 uuid = "82ae8749-77ed-4fe6-ae5f-f523153014b0"
-version = "1.2.1"
+version = "1.2.2"
 
 [[deps.StatsBase]]
 deps = ["DataAPI", "DataStructures", "LinearAlgebra", "LogExpFunctions", "Missings", "Printf", "Random", "SortingAlgorithms", "SparseArrays", "Statistics", "StatsAPI"]
@@ -1492,10 +1425,10 @@ uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 version = "0.33.16"
 
 [[deps.StatsFuns]]
-deps = ["ChainRulesCore", "HypergeometricFunctions", "InverseFunctions", "IrrationalConstants", "LogExpFunctions", "Reexport", "Rmath", "SpecialFunctions"]
-git-tree-sha1 = "25405d7016a47cf2bd6cd91e66f4de437fd54a07"
+deps = ["ChainRulesCore", "InverseFunctions", "IrrationalConstants", "LogExpFunctions", "Reexport", "Rmath", "SpecialFunctions"]
+git-tree-sha1 = "5950925ff997ed6fb3e985dcce8eb1ba42a0bbe7"
 uuid = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
-version = "0.9.16"
+version = "0.9.18"
 
 [[deps.StatsModels]]
 deps = ["DataAPI", "DataStructures", "LinearAlgebra", "Printf", "REPL", "ShiftedArrays", "SparseArrays", "StatsBase", "StatsFuns", "Tables"]
@@ -1509,6 +1442,12 @@ git-tree-sha1 = "57617b34fa34f91d536eb265df67c2d4519b8b98"
 uuid = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
 version = "0.6.5"
 
+[[deps.StructTypes]]
+deps = ["Dates", "UUIDs"]
+git-tree-sha1 = "d24a825a95a6d98c385001212dc9020d609f2d4f"
+uuid = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
+version = "1.8.1"
+
 [[deps.SuiteSparse]]
 deps = ["Libdl", "LinearAlgebra", "Serialization", "SparseArrays"]
 uuid = "4607b0f0-06f3-5cda-b6b1-a6196a1729e9"
@@ -1517,35 +1456,17 @@ uuid = "4607b0f0-06f3-5cda-b6b1-a6196a1729e9"
 deps = ["Dates"]
 uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
-[[deps.TableOperations]]
-deps = ["SentinelArrays", "Tables", "Test"]
-git-tree-sha1 = "e383c87cf2a1dc41fa30c093b2a19877c83e1bc1"
-uuid = "ab02a1b2-a7df-11e8-156e-fb1833f50b87"
-version = "1.2.0"
-
-[[deps.TableShowUtils]]
-deps = ["DataValues", "Dates", "JSON", "Markdown", "Test"]
-git-tree-sha1 = "14c54e1e96431fb87f0d2f5983f090f1b9d06457"
-uuid = "5e66a065-1f0a-5976-b372-e0b8c017ca10"
-version = "0.2.5"
-
 [[deps.TableTraits]]
 deps = ["IteratorInterfaceExtensions"]
 git-tree-sha1 = "c06b2f539df1c6efa794486abfb6ed2022561a39"
 uuid = "3783bdb8-4a98-5b6b-af9a-565f29a5fe9c"
 version = "1.0.1"
 
-[[deps.TableTraitsUtils]]
-deps = ["DataValues", "IteratorInterfaceExtensions", "Missings", "TableTraits"]
-git-tree-sha1 = "78fecfe140d7abb480b53a44f3f85b6aa373c293"
-uuid = "382cd787-c1b6-5bf2-a167-d5b971a19bda"
-version = "1.0.2"
-
 [[deps.Tables]]
-deps = ["DataAPI", "DataValueInterfaces", "IteratorInterfaceExtensions", "LinearAlgebra", "TableTraits", "Test"]
-git-tree-sha1 = "bb1064c9a84c52e277f1096cf41434b675cd368b"
+deps = ["DataAPI", "DataValueInterfaces", "IteratorInterfaceExtensions", "LinearAlgebra", "OrderedCollections", "TableTraits", "Test"]
+git-tree-sha1 = "5ce79ce186cc678bbb5c5681ca3379d1ddae11a1"
 uuid = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
-version = "1.6.1"
+version = "1.7.0"
 
 [[deps.Tar]]
 deps = ["ArgTools", "SHA"]
@@ -1563,9 +1484,9 @@ uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [[deps.TiffImages]]
 deps = ["ColorTypes", "DataStructures", "DocStringExtensions", "FileIO", "FixedPointNumbers", "IndirectArrays", "Inflate", "OffsetArrays", "PkgVersion", "ProgressMeter", "UUIDs"]
-git-tree-sha1 = "991d34bbff0d9125d93ba15887d6594e8e84b305"
+git-tree-sha1 = "aaa19086bc282630d82f818456bc40b4d314307d"
 uuid = "731e570b-9d59-4bfa-96dc-6df516fadf69"
-version = "0.5.3"
+version = "0.5.4"
 
 [[deps.TranscodingStreams]]
 deps = ["Random", "Test"]
@@ -1590,6 +1511,12 @@ deps = ["REPL"]
 git-tree-sha1 = "53915e50200959667e78a92a418594b428dffddf"
 uuid = "1cfade01-22cf-5700-b092-accc4b62d6e1"
 version = "0.4.1"
+
+[[deps.WeakRefStrings]]
+deps = ["DataAPI", "InlineStrings", "Parsers"]
+git-tree-sha1 = "b1be2855ed9ed8eac54e5caff2afcdb442d52c23"
+uuid = "ea10d353-3f73-51f8-a26c-33c1cb351aa5"
+version = "1.4.2"
 
 [[deps.WoodburyMatrices]]
 deps = ["LinearAlgebra", "SparseArrays"]
@@ -1723,50 +1650,72 @@ version = "3.5.0+0"
 """
 
 # ╔═╡ Cell order:
-# ╟─848c151d-64bb-4fa6-8bb2-9487630082f6
-# ╟─2b03517f-7981-42e3-b68b-14d3c6320c09
-# ╟─041a1ad2-ecb0-4f14-b911-ba18c571e49b
-# ╟─51c4aa0c-9bb3-11ec-0174-c73d599a839a
-# ╟─ec3bd004-217e-4ca2-bf3c-0fd5addb53f2
-# ╟─688f4613-d8f9-4f39-b8a0-3fea94760a09
-# ╟─9a417f25-7cbf-471f-817e-bcf141d39859
-# ╟─a92573ea-3ec5-4e23-959f-23a42cfd351c
-# ╟─b6307c8e-8990-4891-b8fc-5c179ee4d088
-# ╟─6bb20426-93f1-4354-ab2b-8ee694a24dbc
-# ╟─5b3d6413-e4bf-494e-8d1b-b30cb1954ca7
-# ╠═b2e133a8-d73f-4e54-9265-b86cc4fc3e0f
-# ╠═bbbe7c01-7aa5-45f7-a69e-f73c16356051
-# ╠═9fdb06d2-0912-41ef-9032-eb04c1bfe38c
-# ╠═e472c405-45d3-4e14-a79e-a5194856758e
-# ╠═a9744cec-04bc-4815-ad27-657ff93e444f
-# ╠═e1517bdd-7d39-438b-8890-7c6e482e7c23
-# ╟─0774c0f0-c9a1-4155-9b46-03ef5d519c60
-# ╟─adf0979d-bbd6-4676-b5aa-c0a864b52eb3
-# ╠═99ac9ebd-2281-489d-8c07-e92191e1835d
-# ╠═50e3c278-606b-4a40-ad3b-93c84aba02a3
-# ╟─02c414cf-a116-42d8-9eec-6b58e1a50fa0
-# ╠═b3e11e6e-ae0a-4a90-9a29-15b873b8db77
-# ╠═1b68e7cc-a3e3-4f75-8d84-a922a4555f0d
-# ╠═5241151e-b192-44ab-b169-795f31022ecf
-# ╠═ce6e6773-d3cc-4dc3-9f59-089f80691fad
-# ╠═e4d3e9da-558b-4b24-bfa2-d9ee70f65c2f
-# ╠═e39f1c77-f1a6-4ac5-aa6b-357e6afc46c6
-# ╠═7a5d6141-b1e4-43d8-89fb-c8e38fc5b71e
-# ╟─974c16c4-72a3-4e45-81c2-a9163d97f4c9
-# ╠═991776e6-9c6e-4a83-aa05-b2f702ef658d
-# ╟─5ddef2ac-7e81-4c1e-be62-1557f953d563
-# ╟─bf451ba4-4fbb-4be2-8d49-2b090088de1f
-# ╠═e1fb40b7-6cab-4729-90de-585912f6a483
-# ╠═c77e12e7-31ff-4410-9257-547e514863bd
-# ╟─0bb8567b-d4cb-4278-b955-093f663a208b
-# ╠═70291a3d-a0f4-49c6-8745-abe745ee82b5
-# ╟─71242024-569f-47bc-9276-e1dbd832ad0f
-# ╠═f3193d30-df24-4ac7-a285-f868c0906d4d
-# ╠═90b9be8d-f4de-4ba7-bbd3-16f210d3595a
-# ╠═73701b0b-d331-47ff-9782-d24572d35172
-# ╠═666b2dba-511f-4293-88ce-a37db494e8ee
-# ╠═6f324ac1-9277-493a-a44b-a68d68f15709
-# ╠═bf793cd4-f6ab-489f-a8dc-d826862d59e0
-# ╠═b7bf809c-8083-4228-81f2-88273387eacb
+# ╟─acac281d-e1e6-4ff7-9c42-9fd8f3a4d2f5
+# ╠═47a4c430-8dc2-4a8e-a597-9855e3a3c601
+# ╟─16e40b8a-30da-4cef-8263-fd06ca9153e0
+# ╟─5e4c20e4-4e3e-4ea2-ae2d-5dcf98a47b1c
+# ╠═b15a98b3-49ba-4ce5-b7b3-29d032f8ce1c
+# ╠═bcdbd2d0-44fc-4df9-a573-caf0043f5915
+# ╠═dfdcdc9e-acc1-416b-9fb1-25eb541984bd
+# ╠═7170f333-d433-4433-b497-122ac738639b
+# ╟─2424b6af-daa8-49d3-ad80-dcf302155026
+# ╠═93e8f1f4-8ec8-487a-b08d-eba03ac0fc1d
+# ╠═2542d461-e62e-4033-98bc-308539631bdc
+# ╟─3da36663-6898-40dc-b0b4-5e25c5354863
+# ╠═68aa2779-c9c1-4ea9-87e7-833f2223d173
+# ╟─dacaffe9-c0ee-43e0-adef-6d1de2771059
+# ╠═6268750b-b240-4e86-813c-498a1089a254
+# ╠═0053e2f7-1071-456f-b881-7de3921867f7
+# ╠═5caad563-6387-4fda-9a8a-438c3852d0c6
+# ╠═50ece353-f618-4f61-af3a-75f6096d6680
+# ╠═d8a4bda7-b495-4d4e-a87b-2e09c74d355f
+# ╟─19554911-d5d1-4617-9818-e26f4313cd25
+# ╠═5983a679-3567-454f-a505-e4578a77d65f
+# ╠═21ee0bed-59fe-41b8-bcee-e3b7013d5b0c
+# ╠═ac5d2a35-30b9-4cbc-b6ff-21024abdcfcc
+# ╠═75e2a1c0-3e23-45a7-abdb-c805a8e85b24
+# ╠═8e6596e1-d27d-48a4-8b31-1a07e7cd4cb8
+# ╠═a4a639d2-63ab-43cc-ab68-321430b4e6c9
+# ╠═b85beb21-170b-478f-b6b0-d93856adf57d
+# ╠═e0777e07-442e-48d9-b846-a18aa39e5a59
+# ╟─fa9d44f8-bd87-43c6-b223-a01055b6923b
+# ╟─27ad7824-8fce-4419-91c4-8085a40a0643
+# ╠═25fbfadc-1734-4490-a746-40adede1113a
+# ╠═8b7cbca0-2ec0-4ed4-bef2-47e2cd4c986b
+# ╠═5b2abb1e-7f5a-47e2-a66a-559419329bd6
+# ╟─2d3dfc81-9e1c-4765-b635-03f54a42fb76
+# ╟─53b52dd3-b563-44fc-af5e-8af63d9414f9
+# ╠═9559b7f3-6910-4cad-8514-d748cfe08bdf
+# ╠═521ea49c-9ca5-4a96-9f8b-884437726afa
+# ╠═226b62e5-ddb5-4945-8de7-5fa5a2b14bdf
+# ╠═e0498239-d59d-482d-9866-593526a7a3fd
+# ╟─3f5f3b97-f618-4da1-8c06-082cfefe6274
+# ╠═d592a7b2-600a-4fd1-bf19-116818de6b5e
+# ╠═3fdd07ba-491b-416c-b24d-62fbd8b526ec
+# ╠═5ada6126-f749-49d0-b481-47bf06febb06
+# ╠═09cc60f5-18b3-470a-bbd9-dbf0fbad5e4a
+# ╠═7765837d-f36b-4412-a7be-a47e93f2ec47
+# ╟─df6644b5-f38d-4b10-a66e-16fffec4e9f3
+# ╠═f4acacb5-c8c8-49a0-b7a5-7942d067cd9a
+# ╠═a8a1d8f3-7219-4f6b-b135-71f74eb1a2c5
+# ╠═0d177910-d9cd-4c04-a53d-0d500cb9c555
+# ╠═013fd307-1265-4f71-91ff-9ed6a6630d31
+# ╠═608916e6-27b8-4309-9c9f-8eb28af4f013
+# ╠═96a7b079-c3e6-46de-ab76-b8ab6f4d84cc
+# ╟─5d5af0ae-9a7a-459d-9e95-1cbba7ed67be
+# ╠═7c5cbd92-6b6f-497d-bd5d-99663e1a8356
+# ╠═b8f76f30-ed9e-4010-b4e8-a3b173c2f302
+# ╠═a4afbec4-6358-4408-b8f9-a41bf8ade392
+# ╟─173a609f-5033-44c0-a2bd-56263bb2f031
+# ╠═0614b259-53dc-440c-8b2a-6ed457a34bf1
+# ╠═61e011d0-fbb7-4dd1-bd13-175068e73ef1
+# ╠═4b0c5f6e-551c-488f-8b39-0554a3603f69
+# ╠═d36d5273-2a75-46c8-9703-e0e100a8a44b
+# ╠═bba95138-19df-46b2-b301-983f23e10ab8
+# ╠═10517f24-bfde-11ec-1178-fdf753224f0c
+# ╠═b2dd3364-daa7-4504-bddc-1e3e3e11f7d6
+# ╠═54ea24e3-c599-4fe7-a4ac-569bb76a3b96
+# ╠═5b9e4ddc-97ef-481a-80bf-1eaeaaf3d182
+# ╠═28518be7-e166-4f85-a869-15d796ec1827
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
