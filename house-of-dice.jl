@@ -40,6 +40,9 @@ n_left = 6
 # ╔═╡ c5503448-fb1d-4c75-8176-3a677c10bc50
 n_right = 6
 
+# ╔═╡ 3cd44bc2-5a36-4ac3-9418-88a06a7575f2
+@bind λ PlutoUI.Slider(range(0, 1, length=30))
+
 # ╔═╡ 7027a76b-a998-442d-8692-cb92a855fd07
 md"""
 Show solution: $(@bind show_solution CheckBox(default=false))
@@ -202,10 +205,13 @@ function house_of_ones!(
 		h; circ_size, text_ypos, fontsize
 	)
 	
-	ten_points = new_ten(h; center)
-	empty_house!(ax, ("E", digit), color, x_shift, center, h, ten_points; circ_size, text_ypos, fontsize)
+	ten_dots = new_ten(h; center)
+	empty_house!(ax, ("E", digit), color, x_shift, center, h, ten_dots; circ_size, text_ypos, fontsize)
 
-	poly!(ax, Circle.(ten_points[select_from_ten(digit)], 0.7 * circ_size * h); color)
+	dots = ten_dots[select_from_ten(digit)]
+	poly!(ax, Circle.(dots, 0.7 * circ_size * h); color)
+
+	(; ten_dots, dots)
 end
 
 # ╔═╡ a41d8cfe-5eb1-456c-b5e9-c988c373351b
@@ -234,7 +240,7 @@ function display_number!(ax, number; circ_size=0.15, fontsize=50, h_small=1.0, x
 	@assert x_shift_one ≈ (ten > 0 ? x + (gap + h_small)/2 : x)
 	center = Point2f(x_shift_one, 0.0)
 		
-	house_of_ones!(ax,
+	out_ones = house_of_ones!(ax,
 		one, ones_color,
 		x_shift_one, center,
 		h_small; circ_size, text_ypos, fontsize
@@ -242,7 +248,7 @@ function display_number!(ax, number; circ_size=0.15, fontsize=50, h_small=1.0, x
 
 	left  = ten > 0 ? x_shift_ten - h_big/2 : x_shift_one - h_small/2
 	right = x_shift_one + h_small/2
-	(; right, left)
+	(; right, left, out_ones)
 end
 
 # ╔═╡ 0dc65234-09a6-4d94-bad2-4c7fc7d271ae
@@ -251,8 +257,69 @@ let
 	ax = Axis(fig[1,1], aspect = DataAspect(), yautolimitmargin = (0.1, 0.02), backgroundcolor = :gray95)
 	hidespines!(ax)
 	hidedecorations!(ax)
-	display_number!(ax, 5)
 
+	left_number = 2
+	right_number = 4
+	solution_number = left_number + right_number
+	
+	# left
+	(; out_ones) = display_number!(ax, left_number, x = 0.0)
+	left = out_ones
+	# right
+	(; out_ones) = display_number!(ax, right_number, x = 1.5)
+	right = out_ones
+	# solution
+	(; out_ones) = display_number!(ax, 0, x = 3.0)
+	solution = out_ones
+
+	left_dots = left.dots
+	right_dots = right.dots
+
+	solution_dots1 = solution.ten_dots[select_from_ten(left_number)]
+	solution_dots = solution.ten_dots[select_from_ten(solution_number)]
+	solution_dots2 = setdiff(solution_dots, solution_dots1)
+	#λ = 0.5
+	
+	first_five = solution.ten_dots[select_from_ten(5)]
+	second_five = setdiff(solution.ten_dots, first_five)
+
+	dots_source = [left_dots]
+	dots_target = [solution_dots1]
+	
+	if left_number ≤ 5
+		push!(dots_target, solution_dots2 ∩ first_five)
+		push!(dots_target, solution_dots2 ∩ second_five)
+
+		move_last = right.ten_dots[select_from_ten(solution_number - 5)]
+		move_first = setdiff(right_dots, move_last)
+
+		push!(dots_source, move_first)
+		push!(dots_source, move_last)
+		#remainder = right
+		#push!(dots, )
+	end
+
+	markersize = 45
+	@assert length(dots_source) == length(dots_target)
+	segments = length(dots_source) 
+	scatter!.(dots_source)
+	#scatter!.(dots_target)
+#=
+	for seg ∈ 1:segments
+		source = dots_source[seg]
+		target = dots_target[seg]
+
+		λ₁ = clamp((λ*3) - (seg - 1), 0.0, 1.0)
+		λ₁ > 0
+		scatter!(source; color = :gray, markersize)
+		scatter!((1-λ₁) * source  + λ₁ * target; markersize, color = :darkgreen)
+	end
+=#
+	#λ₂ = max(λ-1, 0.0)
+	#scatter!((1-λ₂) * right_dots + λ₂ * solution_dots2)
+	# = #
+	#out_ones
+	#scatter!(out_ones.dots)
 	fig
 end
 
@@ -1788,6 +1855,7 @@ version = "3.5.0+0"
 # ╠═a35b7083-b7c6-4f36-8735-699ac461fed9
 # ╠═06459bf4-08a2-465d-92ac-1ee19991fabd
 # ╠═c5503448-fb1d-4c75-8176-3a677c10bc50
+# ╠═3cd44bc2-5a36-4ac3-9418-88a06a7575f2
 # ╠═0dc65234-09a6-4d94-bad2-4c7fc7d271ae
 # ╠═6b765654-6c75-4493-8747-5e2d747acd2a
 # ╟─7027a76b-a998-442d-8692-cb92a855fd07
